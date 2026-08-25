@@ -66,7 +66,6 @@ private struct WorkoutAccessoryView: View {
         }
     }
 
-    // Compact inline view — shown when user scrolls down and tab bar collapses
     private var inlineBar: some View {
         HStack(spacing: 12) {
             Image(systemName: "dumbbell.fill")
@@ -92,7 +91,6 @@ private struct WorkoutAccessoryView: View {
         .padding(.vertical, 10)
     }
 
-    // Expanded view — shown above tab bar when at the top
     private var expandedBar: some View {
         Button { appState.showActiveWorkout = true } label: {
             Text("Start Workout")
@@ -102,6 +100,36 @@ private struct WorkoutAccessoryView: View {
         }
         .buttonStyle(.plain)
         .tint(.appAccent)
+    }
+}
+
+// MARK: - Animated checkmark for completed workout days
+private struct CheckmarkShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        p.move(to: CGPoint(x: rect.minX, y: rect.midY * 0.85))
+        p.addLine(to: CGPoint(x: rect.width * 0.38, y: rect.maxY))
+        p.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+        return p
+    }
+}
+
+private struct AnimatedCheckmark: View {
+    @State private var progress: CGFloat = 0
+
+    var body: some View {
+        CheckmarkShape()
+            .trim(from: 0, to: progress)
+            .stroke(
+                Color(red: 0.3, green: 0.85, blue: 0.45),
+                style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round)
+            )
+            .frame(width: 12, height: 9)
+            .onAppear {
+                withAnimation(.easeOut(duration: 0.45).delay(0.05)) {
+                    progress = 1
+                }
+            }
     }
 }
 
@@ -123,8 +151,12 @@ struct DashboardView: View {
         w.exercises.filter { isExerciseCompleted($0) }.count
     }
 
-    // Mon-Sun tuples for current week
-    var weekDays: [(date: Date, letter: String, num: String, hasWorkout: Bool)] {
+    private func isWorkoutCompleted(_ workout: WorkoutDay, on date: Date) -> Bool {
+        appState.workoutStore.isWorkoutCompleted(workout, on: date)
+    }
+
+    // Mon-Sun tuples for current week — carries the full WorkoutDay? for completion checks
+    var weekDays: [(date: Date, letter: String, num: String, workout: WorkoutDay?)] {
         let today = Date()
         let wd = cal.component(.weekday, from: today)
         let offset = wd == 1 ? -6 : -(wd - 2)
@@ -132,7 +164,7 @@ struct DashboardView: View {
         let letters = ["M","T","W","T","F","S","S"]
         return (0..<7).map { i in
             let d = cal.date(byAdding: .day, value: i, to: monday)!
-            return (d, letters[i], String(cal.component(.day, from: d)), WorkoutDay.weekSchedule[i] != nil)
+            return (d, letters[i], String(cal.component(.day, from: d)), WorkoutDay.weekSchedule[i])
         }
     }
 
@@ -181,7 +213,6 @@ struct DashboardView: View {
                     }
                     .buttonStyle(.plain)
                 }
-
             }
         }
         .sheet(item: $setupExercise) { ex in
@@ -201,7 +232,7 @@ struct DashboardView: View {
         }
     }
 
-    // MARK: - Weekday Strip (GlassEffectContainer enables morphing of the selected day indicator)
+    // MARK: - Weekday Strip
     var weekStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             GlassEffectContainer(spacing: 8) {
@@ -209,6 +240,7 @@ struct DashboardView: View {
                     ForEach(weekDays, id: \.date) { item in
                         let selected = cal.isDate(item.date, inSameDayAs: appState.selectedDate)
                         let isToday  = cal.isDateInToday(item.date)
+                        let done     = item.workout.map { isWorkoutCompleted($0, on: item.date) } ?? false
 
                         Button {
                             withAnimation(.spring(response: 0.4)) { appState.selectedDate = item.date }
@@ -232,9 +264,17 @@ struct DashboardView: View {
                                         .foregroundStyle(isToday ? AnyShapeStyle(Color.appAccent) : AnyShapeStyle(Color.primary))
                                 }
 
-                                Circle()
-                                    .fill(item.hasWorkout ? Color.appAccent : .clear)
-                                    .frame(width: 5, height: 5)
+                                // Bottom indicator: animated checkmark if done, dot if workout pending, invisible if rest
+                                ZStack {
+                                    if done {
+                                        AnimatedCheckmark()
+                                    } else if item.workout != nil {
+                                        Circle()
+                                            .fill(Color.appAccent)
+                                            .frame(width: 5, height: 5)
+                                    }
+                                }
+                                .frame(width: 14, height: 10)
                             }
                             .frame(width: 50)
                         }
@@ -246,7 +286,7 @@ struct DashboardView: View {
         }
     }
 
-    // MARK: - Workout Card (Liquid Glass container for the workout summary)
+    // MARK: - Workout Card
     func workoutCard(_ w: WorkoutDay) -> some View {
         let done = completedCount(for: w)
         let allDone = done == w.exercises.count && done > 0
@@ -259,7 +299,6 @@ struct DashboardView: View {
                 }
                 Spacer()
                 HStack(spacing: 8) {
-                    // Switch button — glass tinted with accent
                     Button {  } label: {
                         HStack(spacing: 5) {
                             Image(systemName: "arrow.2.squarepath").font(.system(size: 12, weight: .bold))
@@ -273,7 +312,6 @@ struct DashboardView: View {
                 }
             }
 
-            // Tag pills — Liquid Glass capsules (the default shape)
             GlassEffectContainer(spacing: 6) {
                 HStack(spacing: 8) {
                     tagPill(icon: "clock", label: "\(w.durationMinutes)m")
@@ -281,7 +319,6 @@ struct DashboardView: View {
                 }
             }
 
-            // Completion progress indicator
             if done > 0 {
                 HStack(spacing: 6) {
                     Image(systemName: allDone ? "checkmark.circle.fill" : "circle.dotted")
