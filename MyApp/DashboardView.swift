@@ -39,13 +39,16 @@ struct MainTabView: View {
 struct PlaceholderTabView: View {
     let title: String; let icon: String
     var body: some View {
-        ZStack {
-            AppBackground()
-            VStack(spacing: 14) {
-                Image(systemName: icon).font(.system(size: 52)).foregroundColor(.appAccent.opacity(0.5))
-                Text(title).font(.system(size: 22, weight: .bold))
-                Text("Coming soon").font(.system(size: 14)).foregroundColor(.secondary)
+        NavigationStack {
+            ZStack {
+                AppBackground()
+                VStack(spacing: 14) {
+                    Image(systemName: icon).font(.system(size: 52)).foregroundColor(.appAccent.opacity(0.5))
+                    Text(title).font(.system(size: 22, weight: .bold))
+                    Text("Coming soon").font(.system(size: 14)).foregroundColor(.secondary)
+                }
             }
+            .navigationBarTitleDisplayMode(.inline)
         }
     }
 }
@@ -172,17 +175,19 @@ struct DashboardView: View {
             }
         }
         .sheet(item: $setupExercise) { ex in
-            ExerciseSetupView(
-                exercise: ex,
-                workout: appState.todayWorkout,
-                onStartWorkout: {
-                    setupExercise = nil
-                    Task {
-                        try? await Task.sleep(nanoseconds: 350_000_000)
-                        appState.showActiveWorkout = true
+            NavigationStack {
+                ExerciseSetupView(
+                    exercise: ex,
+                    workout: appState.todayWorkout,
+                    onStartWorkout: {
+                        setupExercise = nil
+                        Task {
+                            try? await Task.sleep(nanoseconds: 350_000_000)
+                            appState.showActiveWorkout = true
+                        }
                     }
-                }
-            )
+                )
+            }
         }
     }
 

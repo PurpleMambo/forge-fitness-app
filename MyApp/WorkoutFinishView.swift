@@ -8,6 +8,7 @@ struct WorkoutFinishOverlay: View {
     let workoutStore: WorkoutStore
     var onResume: () -> Void
     var onFinish: () -> Void
+    var onDiscard: () -> Void = {}
 
     @State private var syncAppleHealth = false
     @State private var postStrava      = false
@@ -52,11 +53,11 @@ struct WorkoutFinishOverlay: View {
                 .ignoresSafeArea()
                 .onTapGesture { onResume() }
 
-            // Dismiss (X) pinned to top-trailing
+            // Dismiss (X) pinned to top-trailing — exits the workout without logging
             VStack {
                 HStack {
                     Spacer()
-                    Button { onResume() } label: {
+                    Button { onDiscard() } label: {
                         Image(systemName: "xmark")
                             .font(.system(size: 13, weight: .bold))
                     }

@@ -46,6 +46,10 @@ struct ActiveWorkoutView: View {
                         timerTask?.cancel()
                         withAnimation(.spring(response: 0.4)) { showFinishSheet = false }
                         showSummary = true
+                    },
+                    onDiscard: {
+                        timerTask?.cancel()
+                        isPresented = false
                     }
                 )
                 .transition(.opacity.combined(with: .move(edge: .bottom)))
@@ -62,7 +66,9 @@ struct ActiveWorkoutView: View {
         }
         .onDisappear { timerTask?.cancel() }
         .sheet(item: $selectedExercise) { ex in
-            ExerciseSetupView(exercise: ex, workoutStore: workoutStore)
+            NavigationStack {
+                ExerciseSetupView(exercise: ex, workoutStore: workoutStore)
+            }
         }
         .fullScreenCover(isPresented: $showSummary) {
             WorkoutSummaryView(
@@ -79,7 +85,8 @@ struct ActiveWorkoutView: View {
     var topBar: some View {
         HStack {
             Button {
-                withAnimation(.spring(response: 0.4)) { showFinishSheet = true }
+                timerTask?.cancel()
+                isPresented = false
             } label: {
                 Image(systemName: "xmark").font(.system(size: 14, weight: .bold))
             }

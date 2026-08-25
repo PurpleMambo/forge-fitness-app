@@ -94,7 +94,7 @@ struct ExerciseSetupView: View {
                 bottomCTA
             }
         }
-        .sheet(isPresented: $showHowTo) {
+        .navigationDestination(isPresented: $showHowTo) {
             ExerciseDetailView(exercise: exercise)
         }
         .onChange(of: showHowTo) { _, showing in
