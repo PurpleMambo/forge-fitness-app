@@ -204,16 +204,29 @@ struct ExerciseWorkoutSheet: View {
     // MARK: - Hero
     var heroSection: some View {
         ZStack(alignment: .topTrailing) {
-            Rectangle()
-                .fill(LinearGradient(
-                    colors: [Color(red: 0.15, green: 0.10, blue: 0.25), .black],
-                    startPoint: .top, endPoint: .bottom))
-                .frame(height: 240)
-                .overlay {
-                    Image(systemName: exercise.sfSymbol)
-                        .font(.system(size: 72))
-                        .foregroundColor(.white.opacity(0.14))
-                }
+            if let resource = exercise.videoResource,
+               let url = Bundle.main.videoURL(named: resource) {
+                LoopingVideoPlayer(url: url)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 240)
+                    .clipped()
+                    .overlay {
+                        LinearGradient(
+                            colors: [.clear, .black.opacity(0.55)],
+                            startPoint: .center, endPoint: .bottom)
+                    }
+            } else {
+                Rectangle()
+                    .fill(LinearGradient(
+                        colors: [Color(red: 0.15, green: 0.10, blue: 0.25), .black],
+                        startPoint: .top, endPoint: .bottom))
+                    .frame(height: 240)
+                    .overlay {
+                        Image(systemName: exercise.sfSymbol)
+                            .font(.system(size: 72))
+                            .foregroundColor(.white.opacity(0.14))
+                    }
+            }
             Button { dismiss() } label: {
                 Image(systemName: "xmark").font(.system(size: 14, weight: .bold))
             }

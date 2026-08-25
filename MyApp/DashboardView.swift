@@ -40,6 +40,7 @@ struct DashboardView: View {
     @Environment(AppState.self) var appState
     @Namespace private var dayNamespace
     private let cal = Calendar.current
+    @State private var showActiveWorkout = false
 
     // Mon-Sun tuples for current week
     var weekDays: [(date: Date, letter: String, num: String, hasWorkout: Bool)] {
@@ -62,27 +63,35 @@ struct DashboardView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            AppBackground()
+        NavigationStack {
+            ZStack(alignment: .bottom) {
+                AppBackground()
 
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 0) {
-                    headerRow.padding(.top, 14)
-                    weekStrip.padding(.top, 20)
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        headerRow.padding(.top, 14)
+                        weekStrip.padding(.top, 20)
 
-                    if let w = todayWorkout {
-                        workoutCard(w).padding(.top, 22).padding(.horizontal, 18)
-                        calibrationCard.padding(.top, 14).padding(.horizontal, 18)
-                        exerciseSection(w).padding(.top, 14).padding(.horizontal, 18)
-                    } else {
-                        restCard.padding(.top, 22).padding(.horizontal, 18)
+                        if let w = todayWorkout {
+                            workoutCard(w).padding(.top, 22).padding(.horizontal, 18)
+                            calibrationCard.padding(.top, 14).padding(.horizontal, 18)
+                            exerciseSection(w).padding(.top, 14).padding(.horizontal, 18)
+                        } else {
+                            restCard.padding(.top, 22).padding(.horizontal, 18)
+                        }
+
+                        Spacer(minLength: 140)
                     }
-
-                    Spacer(minLength: 140)
                 }
-            }
 
-            if todayWorkout != nil { startButton }
+                if todayWorkout != nil { startButton }
+            }
+            .toolbar(.hidden, for: .navigationBar)
+        }
+        .fullScreenCover(isPresented: $showActiveWorkout) {
+            if let w = todayWorkout {
+                ActiveWorkoutView(workout: w, isPresented: $showActiveWorkout)
+            }
         }
     }
 
@@ -231,29 +240,33 @@ struct DashboardView: View {
     }
 
     func exerciseRow(_ ex: Exercise) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: ex.sfSymbol)
-                .font(.system(size: 20))
-                .foregroundColor(ex.isFocus ? .appAccent : .secondary)
-                .frame(width: 52, height: 52)
-                .glassEffect(ex.isFocus ? .regular.tint(.appAccent) : .regular, in: .rect(cornerRadius: 12))
+        NavigationLink {
+            ExerciseDetailView(exercise: ex)
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: ex.sfSymbol)
+                    .font(.system(size: 20))
+                    .foregroundColor(ex.isFocus ? .appAccent : .secondary)
+                    .frame(width: 52, height: 52)
+                    .glassEffect(ex.isFocus ? .regular.tint(.appAccent) : .regular, in: .rect(cornerRadius: 12))
 
-            VStack(alignment: .leading, spacing: 4) {
-                if ex.isFocus {
-                    Text("FOCUS EXERCISE")
-                        .font(.system(size: 9, weight: .heavy)).foregroundColor(.appGold).tracking(1)
+                VStack(alignment: .leading, spacing: 4) {
+                    if ex.isFocus {
+                        Text("FOCUS EXERCISE")
+                            .font(.system(size: 9, weight: .heavy)).foregroundColor(.appGold).tracking(1)
+                    }
+                    Text(ex.name).font(.system(size: 14, weight: .semibold))
+                    Text("\(ex.sets) sets · \(ex.reps) reps · \(ex.weightString) \(ex.weightUnit)")
+                        .font(.system(size: 12)).foregroundStyle(.secondary)
                 }
-                Text(ex.name).font(.system(size: 14, weight: .semibold))
-                Text("\(ex.sets) sets · \(ex.reps) reps · \(ex.weightString) \(ex.weightUnit)")
-                    .font(.system(size: 12)).foregroundStyle(.secondary)
-            }
 
-            Spacer()
-            Button {  } label: { Image(systemName: "ellipsis").foregroundStyle(.secondary) }
-                .buttonStyle(.plain)
+                Spacer()
+                Image(systemName: "ellipsis").foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 12).padding(.vertical, 10)
+            .glassEffect(in: .rect(cornerRadius: 16))
         }
-        .padding(.horizontal, 12).padding(.vertical, 10)
-        .glassEffect(in: .rect(cornerRadius: 16))
+        .buttonStyle(.plain)
     }
 
     // MARK: - Rest Day Card
@@ -281,7 +294,7 @@ struct DashboardView: View {
                 }
                 .buttonStyle(.glass)
 
-                Button("Start Workout") {  }
+                Button("Start Workout") { showActiveWorkout = true }
                     .buttonStyle(.glassProminent)
                     .tint(.appAccent)
                     .frame(maxWidth: .infinity)
