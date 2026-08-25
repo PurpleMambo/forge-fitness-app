@@ -185,7 +185,7 @@ private let steps: [OStep] = [
 struct OnboardingView: View {
     @Environment(AppState.self) var appState
 
-    enum Phase { case chat, plan, signup }
+    enum Phase { case chat, loading, plan, signup }
 
     @State private var phase: Phase = .chat
     @State private var step = 0
@@ -201,9 +201,10 @@ struct OnboardingView: View {
         ZStack {
             AppBackground()
             switch phase {
-            case .chat:   chatBody.transition(.opacity)
-            case .plan:   PlanSummaryView { withAnimation { phase = .signup } }.transition(.opacity)
-            case .signup: SignUpView { appState.onboardingComplete = true }.transition(.opacity)
+            case .chat:    chatBody.transition(.opacity)
+            case .loading: PlanCalculatingView { withAnimation { phase = .plan } }.transition(.opacity)
+            case .plan:    PlanSummaryView { withAnimation { phase = .signup } }.transition(.opacity)
+            case .signup:  SignUpView { appState.onboardingComplete = true }.transition(.opacity)
             }
         }
         .animation(.easeInOut(duration: 0.4), value: phase)
@@ -334,7 +335,7 @@ struct OnboardingView: View {
             showOptions = false; showQ = false; showBubble = false
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-            if isLast { withAnimation { phase = .plan }; busy = false; return }
+            if isLast { withAnimation { phase = .loading }; busy = false; return }
             step += 1
             withAnimation(.spring(response: 0.5)) { showBubble = true; showQ = true }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
@@ -360,6 +361,133 @@ struct OnboardingView: View {
                 busy = false
             }
         }
+    }
+}
+
+// MARK: - Plan Calculating View
+private struct PlanCalculatingView: View {
+    let onComplete: () -> Void
+
+    private let calcSteps = [
+        ("person.fill.checkmark",      "Analyzing your fitness profile"),
+        ("dumbbell.fill",              "Calibrating starting weights"),
+        ("calendar.badge.clock",       "Structuring your training week"),
+        ("heart.fill",                 "Optimizing for recovery"),
+    ]
+
+    @State private var visibleCount = 0
+    @State private var checkedCount = 0
+    @State private var showReady = false
+    @State private var pulseScale: CGFloat = 1.0
+
+    var body: some View {
+        ZStack {
+            AppBackground()
+
+            VStack(alignment: .leading, spacing: 0) {
+                Spacer()
+
+                // Animated bolt icon
+                HStack {
+                    Spacer()
+                    ZStack {
+                        Circle()
+                            .fill(Color.appAccent.opacity(0.15))
+                            .frame(width: 90, height: 90)
+                            .scaleEffect(pulseScale)
+
+                        Circle()
+                            .fill(Color.appAccent.opacity(0.08))
+                            .frame(width: 120, height: 120)
+                            .scaleEffect(pulseScale)
+
+                        Image(systemName: "bolt.fill")
+                            .font(.system(size: 40, weight: .heavy))
+                            .foregroundColor(.appAccent)
+                    }
+                    Spacer()
+                }
+                .padding(.bottom, 44)
+
+                // Heading
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Calculating your")
+                        .font(.system(size: 34, weight: .heavy))
+                        .foregroundColor(.white)
+                    Text("custom plan...")
+                        .font(.system(size: 34, weight: .heavy))
+                        .foregroundColor(.appAccent)
+                }
+                .padding(.horizontal, 32)
+                .padding(.bottom, 36)
+
+                // Step checklist
+                VStack(alignment: .leading, spacing: 18) {
+                    ForEach(Array(calcSteps.enumerated()), id: \.offset) { i, s in
+                        if i < visibleCount {
+                            HStack(spacing: 14) {
+                                ZStack {
+                                    Circle()
+                                        .fill(i < checkedCount ? Color.appAccent : Color.white.opacity(0.08))
+                                        .frame(width: 32, height: 32)
+                                    if i < checkedCount {
+                                        Image(systemName: "checkmark")
+                                            .font(.system(size: 12, weight: .bold))
+                                            .foregroundColor(.white)
+                                    } else {
+                                        Image(systemName: s.0)
+                                            .font(.system(size: 13))
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+
+                                Text(s.1)
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundStyle(i < checkedCount ? AnyShapeStyle(Color.primary) : AnyShapeStyle(Color.secondary))
+                            }
+                            .transition(.asymmetric(
+                                insertion: .move(edge: .leading).combined(with: .opacity),
+                                removal: .opacity
+                            ))
+                        }
+                    }
+
+                    if showReady {
+                        HStack(spacing: 10) {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.appGold)
+                            Text("Your plan is ready!")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.appGold)
+                        }
+                        .transition(.opacity.combined(with: .move(edge: .leading)))
+                    }
+                }
+                .padding(.horizontal, 32)
+
+                Spacer()
+            }
+        }
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
+                pulseScale = 1.18
+            }
+        }
+        .task { await runSequence() }
+    }
+
+    private func runSequence() async {
+        for i in 0..<calcSteps.count {
+            try? await Task.sleep(nanoseconds: 150_000_000)
+            withAnimation(.spring(response: 0.45)) { visibleCount = i + 1 }
+            try? await Task.sleep(nanoseconds: 550_000_000)
+            withAnimation(.spring(response: 0.35)) { checkedCount = i + 1 }
+        }
+        try? await Task.sleep(nanoseconds: 400_000_000)
+        withAnimation(.spring(response: 0.5)) { showReady = true }
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
+        onComplete()
     }
 }
 

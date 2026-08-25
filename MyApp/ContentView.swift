@@ -17,7 +17,9 @@ struct RootView: View {
 
     var body: some View {
         Group {
-            if appState.onboardingComplete {
+            if !appState.welcomeSeen {
+                WelcomeView()
+            } else if appState.onboardingComplete {
                 MainTabView()
             } else {
                 OnboardingView()

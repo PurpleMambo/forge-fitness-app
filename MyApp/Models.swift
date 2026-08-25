@@ -61,6 +61,7 @@ struct WorkoutDay: Identifiable {
 // MARK: - App State
 @Observable
 class AppState {
+    var welcomeSeen = false
     var onboardingComplete = false
     var userInitials = "GG"
     var planName = "Get Lean"
