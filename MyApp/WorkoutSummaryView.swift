@@ -10,6 +10,7 @@ struct WorkoutSummaryView: View {
     private let completedAt = Date()
 
     @State private var showOptions = false
+    @State private var showShare  = false
 
     // MARK: - Computed stats
 
@@ -83,6 +84,14 @@ struct WorkoutSummaryView: View {
             .presentationDragIndicator(.visible)
             .presentationBackground(Color(red: 0.08, green: 0.05, blue: 0.12))
         }
+        .fullScreenCover(isPresented: $showShare) {
+            WorkoutShareView(
+                workout: workout,
+                elapsedSeconds: elapsedSeconds,
+                workoutStore: workoutStore,
+                onDismiss: { showShare = false }
+            )
+        }
     }
 
     // MARK: - Header bar
@@ -96,7 +105,7 @@ struct WorkoutSummaryView: View {
             HStack {
                 Spacer()
                 HStack(spacing: 8) {
-                    Button {} label: {
+                    Button { showShare = true } label: {
                         Image(systemName: "square.and.arrow.up")
                             .font(.system(size: 14, weight: .bold))
                     }
