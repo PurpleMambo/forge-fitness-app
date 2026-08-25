@@ -67,6 +67,15 @@ class AppState {
     var planName = "Get Lean"
     var selectedDate = Date()
     var workoutStore = WorkoutStore()
+    var showActiveWorkout = false
+
+    var todayWorkout: WorkoutDay? {
+        let cal = Calendar.current
+        let wd = cal.component(.weekday, from: selectedDate)
+        let idx = wd == 1 ? 6 : wd - 2
+        guard idx >= 0, idx < 7 else { return nil }
+        return WorkoutDay.weekSchedule[idx]
+    }
 }
 
 // MARK: - Workout Logging

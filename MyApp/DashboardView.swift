@@ -2,7 +2,10 @@ import SwiftUI
 
 // MARK: - Main Tab View (native iOS 26 — Liquid Glass tab bar is automatic)
 struct MainTabView: View {
+    @Environment(AppState.self) var appState
+
     var body: some View {
+        @Bindable var appState = appState
         TabView {
             Tab("Workout", systemImage: "dumbbell.fill") {
                 DashboardView()
@@ -18,6 +21,18 @@ struct MainTabView: View {
             }
         }
         .tint(.appAccent)
+        .tabBarMinimizeBehavior(.onScrollDown)
+        .tabViewBottomAccessory {
+            if appState.todayWorkout != nil {
+                WorkoutAccessoryView()
+                    .tint(.appAccent)
+            }
+        }
+        .fullScreenCover(isPresented: $appState.showActiveWorkout) {
+            if let w = appState.todayWorkout {
+                ActiveWorkoutView(workout: w, isPresented: $appState.showActiveWorkout)
+            }
+        }
     }
 }
 
@@ -35,12 +50,63 @@ struct PlaceholderTabView: View {
     }
 }
 
+// MARK: - Workout Accessory (music-player mini-bar pattern)
+private struct WorkoutAccessoryView: View {
+    @Environment(\.tabViewBottomAccessoryPlacement) private var placement
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        if placement == .inline {
+            inlineBar
+        } else {
+            expandedBar
+        }
+    }
+
+    // Compact inline view — shown when user scrolls down and tab bar collapses
+    private var inlineBar: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "dumbbell.fill")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.appAccent)
+
+            if let w = appState.todayWorkout {
+                Text(w.name)
+                    .font(.system(size: 14, weight: .semibold))
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            Button { appState.showActiveWorkout = true } label: {
+                Image(systemName: "play.fill")
+                    .font(.system(size: 15, weight: .bold))
+            }
+            .buttonStyle(.glassProminent)
+            .tint(.appAccent)
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 10)
+    }
+
+    // Expanded view — shown above tab bar when at the top
+    private var expandedBar: some View {
+        Button { appState.showActiveWorkout = true } label: {
+            Text("Start Workout")
+                .font(.system(size: 20, weight: .bold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+        }
+        .buttonStyle(.plain)
+        .tint(.appAccent)
+    }
+}
+
 // MARK: - Dashboard View
 struct DashboardView: View {
     @Environment(AppState.self) var appState
     @Namespace private var dayNamespace
     private let cal = Calendar.current
-    @State private var showActiveWorkout = false
     @State private var setupExercise: Exercise? = nil
 
     // Mon-Sun tuples for current week
@@ -56,24 +122,16 @@ struct DashboardView: View {
         }
     }
 
-    var todayWorkout: WorkoutDay? {
-        let wd = cal.component(.weekday, from: appState.selectedDate)
-        let idx = wd == 1 ? 6 : wd - 2
-        guard idx >= 0, idx < 7 else { return nil }
-        return WorkoutDay.weekSchedule[idx]
-    }
-
     var body: some View {
         NavigationStack {
-            ZStack(alignment: .bottom) {
+            ZStack {
                 AppBackground()
 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
-                        headerRow.padding(.top, 14)
-                        weekStrip.padding(.top, 20)
+                        weekStrip.padding(.top, 12)
 
-                        if let w = todayWorkout {
+                        if let w = appState.todayWorkout {
                             workoutCard(w).padding(.top, 22).padding(.horizontal, 18)
                             calibrationCard.padding(.top, 14).padding(.horizontal, 18)
                             exerciseSection(w).padding(.top, 14).padding(.horizontal, 18)
@@ -81,48 +139,51 @@ struct DashboardView: View {
                             restCard.padding(.top, 22).padding(.horizontal, 18)
                         }
 
-                        Spacer(minLength: 140)
+                        Spacer(minLength: 120)
                     }
                 }
-
-                if todayWorkout != nil { startButton }
             }
-            .toolbar(.hidden, for: .navigationBar)
-        }
-        .fullScreenCover(isPresented: $showActiveWorkout) {
-            if let w = todayWorkout {
-                ActiveWorkoutView(workout: w, isPresented: $showActiveWorkout)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {  } label: {
+                        HStack(spacing: 8) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.appAccent)
+                                    .frame(width: 30, height: 30)
+                                Text("GG")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(.white)
+                            }
+                            HStack(spacing: 3) {
+                                Text("My Plan")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundStyle(.primary)
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+
             }
         }
         .sheet(item: $setupExercise) { ex in
             ExerciseSetupView(
                 exercise: ex,
-                workout: todayWorkout,
+                workout: appState.todayWorkout,
                 onStartWorkout: {
                     setupExercise = nil
                     Task {
                         try? await Task.sleep(nanoseconds: 350_000_000)
-                        showActiveWorkout = true
+                        appState.showActiveWorkout = true
                     }
                 }
             )
         }
-    }
-
-    // MARK: - Header
-    var headerRow: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                Circle().fill(Color.appAccent).frame(width: 36, height: 36)
-                Text("GG").font(.system(size: 13, weight: .bold)).foregroundColor(.white)
-            }
-            HStack(spacing: 5) {
-                Text("My Plan").font(.system(size: 17, weight: .bold))
-                Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundColor(.secondary)
-            }
-            Spacer()
-        }
-        .padding(.horizontal, 18)
     }
 
     // MARK: - Weekday Strip (GlassEffectContainer enables morphing of the selected day indicator)
@@ -294,26 +355,6 @@ struct DashboardView: View {
         .glassEffect(in: .rect(cornerRadius: 20))
     }
 
-    // MARK: - Start Workout Button (prominent glass with accent tint)
-    var startButton: some View {
-        VStack(spacing: 0) {
-            LinearGradient(colors: [Color.clear, Color.appBg], startPoint: .top, endPoint: .bottom)
-                .frame(height: 48).allowsHitTesting(false)
-            HStack(spacing: 12) {
-                Button {  } label: {
-                    Image(systemName: "arrow.up.left.and.arrow.down.right")
-                        .font(.system(size: 15, weight: .bold))
-                }
-                .buttonStyle(.glass)
-
-                Button("Start Workout") { showActiveWorkout = true }
-                    .buttonStyle(.glassProminent)
-                    .tint(.appAccent)
-                    .frame(maxWidth: .infinity)
-            }
-            .padding(.horizontal, 18).padding(.bottom, 10)
-        }
-    }
 }
 
 #Preview {
