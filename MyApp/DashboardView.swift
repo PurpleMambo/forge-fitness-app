@@ -112,6 +112,17 @@ struct DashboardView: View {
     private let cal = Calendar.current
     @State private var setupExercise: Exercise? = nil
 
+    private static let completedGreen = Color(red: 0.3, green: 0.85, blue: 0.45)
+
+    // MARK: - Completion helpers
+    private func isExerciseCompleted(_ ex: Exercise) -> Bool {
+        appState.workoutStore.totalSetsLogged(for: ex) >= ex.sets
+    }
+
+    private func completedCount(for w: WorkoutDay) -> Int {
+        w.exercises.filter { isExerciseCompleted($0) }.count
+    }
+
     // Mon-Sun tuples for current week
     var weekDays: [(date: Date, letter: String, num: String, hasWorkout: Bool)] {
         let today = Date()
@@ -237,7 +248,9 @@ struct DashboardView: View {
 
     // MARK: - Workout Card (Liquid Glass container for the workout summary)
     func workoutCard(_ w: WorkoutDay) -> some View {
-        VStack(alignment: .leading, spacing: 18) {
+        let done = completedCount(for: w)
+        let allDone = done == w.exercises.count && done > 0
+        return VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 5) {
                     Text(w.name).font(.system(size: 28, weight: .heavy))
@@ -266,6 +279,19 @@ struct DashboardView: View {
                     tagPill(icon: "clock", label: "\(w.durationMinutes)m")
                     tagPill(icon: "building.2.fill", label: w.gymType)
                 }
+            }
+
+            // Completion progress indicator
+            if done > 0 {
+                HStack(spacing: 6) {
+                    Image(systemName: allDone ? "checkmark.circle.fill" : "circle.dotted")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(allDone ? Self.completedGreen : .appAccent)
+                    Text(allDone ? "Workout Complete!" : "\(done) of \(w.exercises.count) exercises done")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(allDone ? Self.completedGreen : .secondary)
+                }
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
         }
         .padding(20)
@@ -301,31 +327,46 @@ struct DashboardView: View {
     }
 
     func exerciseRow(_ ex: Exercise) -> some View {
-        Button { setupExercise = ex } label: {
+        let completed = isExerciseCompleted(ex)
+        let loggedSets = appState.workoutStore.totalSetsLogged(for: ex)
+        return Button { setupExercise = ex } label: {
             HStack(spacing: 14) {
-                Image(systemName: ex.sfSymbol)
+                Image(systemName: completed ? "checkmark.circle.fill" : ex.sfSymbol)
                     .font(.system(size: 22))
-                    .foregroundColor(ex.isFocus ? .appAccent : .secondary)
+                    .foregroundColor(completed ? Self.completedGreen : (ex.isFocus ? .appAccent : .secondary))
                     .frame(width: 58, height: 58)
-                    .glassEffect(ex.isFocus ? .regular.tint(.appAccent) : .regular, in: .rect(cornerRadius: 14))
+                    .glassEffect(
+                        completed
+                            ? .regular.tint(Self.completedGreen)
+                            : (ex.isFocus ? .regular.tint(.appAccent) : .regular),
+                        in: .rect(cornerRadius: 14)
+                    )
 
                 VStack(alignment: .leading, spacing: 4) {
-                    if ex.isFocus {
+                    if completed {
+                        Text("COMPLETED")
+                            .font(.system(size: 10, weight: .heavy)).foregroundColor(Self.completedGreen).tracking(1)
+                    } else if ex.isFocus {
                         Text("FOCUS EXERCISE")
                             .font(.system(size: 10, weight: .heavy)).foregroundColor(.appGold).tracking(1)
                     }
-                    Text(ex.name).font(.system(size: 16, weight: .semibold))
-                    Text("\(ex.sets) sets · \(ex.reps) reps · \(ex.weightString) \(ex.weightUnit)")
+                    Text(ex.name)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(completed ? Color.secondary : Color.primary)
+                    Text(completed
+                         ? "\(loggedSets)/\(ex.sets) sets logged"
+                         : "\(ex.sets) sets · \(ex.reps) reps · \(ex.weightString) \(ex.weightUnit)")
                         .font(.system(size: 13)).foregroundStyle(.secondary)
                 }
 
                 Spacer()
-                Image(systemName: "ellipsis").foregroundStyle(.secondary)
+                Image(systemName: completed ? "checkmark" : "ellipsis").foregroundStyle(.secondary)
             }
             .padding(.horizontal, 14).padding(.vertical, 12)
             .glassEffect(in: .rect(cornerRadius: 18))
         }
         .buttonStyle(.plain)
+        .opacity(completed ? 0.72 : 1.0)
     }
 
     // MARK: - Rest Day Card
