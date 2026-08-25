@@ -132,13 +132,13 @@ struct DashboardView: View {
 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
-                        weekStrip.padding(.top, 12)
+                        weekStrip.padding(.top, 14)
 
                         if let w = appState.todayWorkout {
-                            workoutCard(w).padding(.top, 22).padding(.horizontal, 18)
-                            exerciseSection(w).padding(.top, 14).padding(.horizontal, 18)
+                            workoutCard(w).padding(.top, 24).padding(.horizontal, 18)
+                            exerciseSection(w).padding(.top, 16).padding(.horizontal, 18)
                         } else {
-                            restCard.padding(.top, 22).padding(.horizontal, 18)
+                            restCard.padding(.top, 24).padding(.horizontal, 18)
                         }
 
                         Spacer(minLength: 120)
@@ -194,7 +194,7 @@ struct DashboardView: View {
     var weekStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             GlassEffectContainer(spacing: 8) {
-                HStack(spacing: 4) {
+                HStack(spacing: 6) {
                     ForEach(weekDays, id: \.date) { item in
                         let selected = cal.isDate(item.date, inSameDayAs: appState.selectedDate)
                         let isToday  = cal.isDateInToday(item.date)
@@ -202,30 +202,30 @@ struct DashboardView: View {
                         Button {
                             withAnimation(.spring(response: 0.4)) { appState.selectedDate = item.date }
                         } label: {
-                            VStack(spacing: 5) {
+                            VStack(spacing: 6) {
                                 Text(item.letter)
-                                    .font(.caption2).fontWeight(.medium)
+                                    .font(.caption).fontWeight(.medium)
                                     .foregroundStyle(.secondary)
 
                                 if selected {
                                     Text(item.num)
-                                        .font(.system(size: 15, weight: .bold))
+                                        .font(.system(size: 17, weight: .bold))
                                         .foregroundColor(.white)
-                                        .frame(width: 36, height: 36)
+                                        .frame(width: 40, height: 40)
                                         .glassEffect(.regular.tint(.appAccent).interactive(), in: .circle)
                                         .glassEffectID("daysel", in: dayNamespace)
                                 } else {
                                     Text(item.num)
-                                        .font(.system(size: 15, weight: .regular))
-                                        .frame(width: 36, height: 36)
+                                        .font(.system(size: 17, weight: .regular))
+                                        .frame(width: 40, height: 40)
                                         .foregroundStyle(isToday ? AnyShapeStyle(Color.appAccent) : AnyShapeStyle(Color.primary))
                                 }
 
                                 Circle()
                                     .fill(item.hasWorkout ? Color.appAccent : .clear)
-                                    .frame(width: 4, height: 4)
+                                    .frame(width: 5, height: 5)
                             }
-                            .frame(width: 44)
+                            .frame(width: 50)
                         }
                         .buttonStyle(.plain)
                     }
@@ -237,20 +237,20 @@ struct DashboardView: View {
 
     // MARK: - Workout Card (Liquid Glass container for the workout summary)
     func workoutCard(_ w: WorkoutDay) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(w.name).font(.system(size: 26, weight: .heavy))
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(w.name).font(.system(size: 28, weight: .heavy))
                     Text("\(w.exercises.count) Exercises · \(w.muscleGroups.count) Muscles")
-                        .font(.system(size: 13)).foregroundStyle(.secondary)
+                        .font(.system(size: 15)).foregroundStyle(.secondary)
                 }
                 Spacer()
                 HStack(spacing: 8) {
                     // Switch button — glass tinted with accent
                     Button {  } label: {
                         HStack(spacing: 5) {
-                            Image(systemName: "arrow.2.squarepath").font(.system(size: 11, weight: .bold))
-                            Text("Switch").font(.system(size: 13, weight: .semibold))
+                            Image(systemName: "arrow.2.squarepath").font(.system(size: 12, weight: .bold))
+                            Text("Switch").font(.system(size: 14, weight: .semibold))
                         }
                     }
                     .buttonStyle(.glass(.regular.tint(.appAccent)))
@@ -268,17 +268,17 @@ struct DashboardView: View {
                 }
             }
         }
-        .padding(18)
-        .glassEffect(in: .rect(cornerRadius: 20))
+        .padding(20)
+        .glassEffect(in: .rect(cornerRadius: 22))
     }
 
     func tagPill(icon: String, label: String) -> some View {
         HStack(spacing: 5) {
-            Image(systemName: icon).font(.system(size: 10))
-            Text(label).font(.system(size: 12, weight: .medium))
+            Image(systemName: icon).font(.system(size: 12))
+            Text(label).font(.system(size: 13, weight: .medium))
         }
         .foregroundStyle(.secondary)
-        .padding(.horizontal, 12).padding(.vertical, 7)
+        .padding(.horizontal, 14).padding(.vertical, 8)
         .glassEffect()
     }
 
@@ -289,11 +289,11 @@ struct DashboardView: View {
 
             Button {  } label: {
                 HStack(spacing: 10) {
-                    Image(systemName: "plus").font(.system(size: 14, weight: .bold)).foregroundColor(.appAccent)
-                    Text("Add Exercise").font(.system(size: 14, weight: .semibold)).foregroundColor(.appAccent)
+                    Image(systemName: "plus").font(.system(size: 15, weight: .bold)).foregroundColor(.appAccent)
+                    Text("Add Exercise").font(.system(size: 15, weight: .semibold)).foregroundColor(.appAccent)
                     Spacer()
                 }
-                .padding(.horizontal, 14).padding(.vertical, 14)
+                .padding(.horizontal, 16).padding(.vertical, 16)
             }
             .buttonStyle(.glass)
             .padding(.top, 2)
@@ -302,43 +302,43 @@ struct DashboardView: View {
 
     func exerciseRow(_ ex: Exercise) -> some View {
         Button { setupExercise = ex } label: {
-            HStack(spacing: 12) {
+            HStack(spacing: 14) {
                 Image(systemName: ex.sfSymbol)
-                    .font(.system(size: 20))
+                    .font(.system(size: 22))
                     .foregroundColor(ex.isFocus ? .appAccent : .secondary)
-                    .frame(width: 52, height: 52)
-                    .glassEffect(ex.isFocus ? .regular.tint(.appAccent) : .regular, in: .rect(cornerRadius: 12))
+                    .frame(width: 58, height: 58)
+                    .glassEffect(ex.isFocus ? .regular.tint(.appAccent) : .regular, in: .rect(cornerRadius: 14))
 
                 VStack(alignment: .leading, spacing: 4) {
                     if ex.isFocus {
                         Text("FOCUS EXERCISE")
-                            .font(.system(size: 9, weight: .heavy)).foregroundColor(.appGold).tracking(1)
+                            .font(.system(size: 10, weight: .heavy)).foregroundColor(.appGold).tracking(1)
                     }
-                    Text(ex.name).font(.system(size: 14, weight: .semibold))
+                    Text(ex.name).font(.system(size: 16, weight: .semibold))
                     Text("\(ex.sets) sets · \(ex.reps) reps · \(ex.weightString) \(ex.weightUnit)")
-                        .font(.system(size: 12)).foregroundStyle(.secondary)
+                        .font(.system(size: 13)).foregroundStyle(.secondary)
                 }
 
                 Spacer()
                 Image(systemName: "ellipsis").foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 12).padding(.vertical, 10)
-            .glassEffect(in: .rect(cornerRadius: 16))
+            .padding(.horizontal, 14).padding(.vertical, 12)
+            .glassEffect(in: .rect(cornerRadius: 18))
         }
         .buttonStyle(.plain)
     }
 
     // MARK: - Rest Day Card
     var restCard: some View {
-        VStack(spacing: 14) {
-            Image(systemName: "moon.stars.fill").font(.system(size: 40)).foregroundColor(.appAccent.opacity(0.7))
-            Text("Rest Day").font(.system(size: 22, weight: .heavy))
+        VStack(spacing: 16) {
+            Image(systemName: "moon.stars.fill").font(.system(size: 46)).foregroundColor(.appAccent.opacity(0.7))
+            Text("Rest Day").font(.system(size: 24, weight: .heavy))
             Text("Recovery is part of the program.\nTake it easy today.")
-                .font(.system(size: 14)).foregroundStyle(.secondary)
+                .font(.system(size: 15)).foregroundStyle(.secondary)
                 .multilineTextAlignment(.center).lineSpacing(3)
         }
-        .padding(32).frame(maxWidth: .infinity)
-        .glassEffect(in: .rect(cornerRadius: 20))
+        .padding(36).frame(maxWidth: .infinity)
+        .glassEffect(in: .rect(cornerRadius: 22))
     }
 
 }
