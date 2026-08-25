@@ -9,6 +9,8 @@ struct WorkoutSummaryView: View {
 
     private let completedAt = Date()
 
+    @State private var showOptions = false
+
     // MARK: - Computed stats
 
     var durationString: String {
@@ -70,6 +72,17 @@ struct WorkoutSummaryView: View {
 
             bottomButtons
         }
+        .sheet(isPresented: $showOptions) {
+            WorkoutOptionsSheet(
+                onResumeAndRefresh: { onDone() },
+                onSave: {},
+                onEditDuration: {},
+                onDelete: { onDone() }
+            )
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
+            .presentationBackground(Color(red: 0.08, green: 0.05, blue: 0.12))
+        }
     }
 
     // MARK: - Header bar
@@ -89,7 +102,7 @@ struct WorkoutSummaryView: View {
                     }
                     .buttonStyle(.glass)
 
-                    Button {} label: {
+                    Button { showOptions = true } label: {
                         Image(systemName: "ellipsis")
                             .font(.system(size: 14, weight: .bold))
                     }
@@ -106,7 +119,6 @@ struct WorkoutSummaryView: View {
 
     var heroSection: some View {
         VStack(spacing: 10) {
-            // Two muscle-group icons side by side
             HStack(spacing: -20) {
                 Image(systemName: "figure.strengthtraining.traditional")
                     .font(.system(size: 58))
@@ -225,7 +237,8 @@ struct WorkoutSummaryView: View {
 
             Spacer()
 
-            Button {} label: {
+            // ··· opens options sheet for this specific exercise
+            Button { showOptions = true } label: {
                 Image(systemName: "ellipsis")
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary)
@@ -279,14 +292,13 @@ private struct ConfettiPiece: Identifiable {
 struct ConfettiView: View {
     @State private var launched = false
 
-    // Pieces are stable for the lifetime of this view
     private let pieces: [ConfettiPiece] = {
         let colors: [Color] = [
-            Color(red: 0.72, green: 0.16, blue: 0.22),  // accent red
-            Color(red: 0.20, green: 0.85, blue: 0.45),  // green
-            Color(red: 0.95, green: 0.76, blue: 0.28),  // gold
-            Color(red: 0.35, green: 0.72, blue: 1.00),  // blue
-            Color(red: 1.00, green: 0.38, blue: 0.28),  // orange-red
+            Color(red: 0.72, green: 0.16, blue: 0.22),
+            Color(red: 0.20, green: 0.85, blue: 0.45),
+            Color(red: 0.95, green: 0.76, blue: 0.28),
+            Color(red: 0.35, green: 0.72, blue: 1.00),
+            Color(red: 1.00, green: 0.38, blue: 0.28),
         ]
         return (0..<90).map { i in
             ConfettiPiece(
@@ -326,7 +338,6 @@ struct ConfettiView: View {
             }
         }
         .onAppear {
-            // One run-loop pass so initial state renders before animation starts
             DispatchQueue.main.async { launched = true }
         }
     }
