@@ -136,7 +136,6 @@ struct DashboardView: View {
 
                         if let w = appState.todayWorkout {
                             workoutCard(w).padding(.top, 22).padding(.horizontal, 18)
-                            calibrationCard.padding(.top, 14).padding(.horizontal, 18)
                             exerciseSection(w).padding(.top, 14).padding(.horizontal, 18)
                         } else {
                             restCard.padding(.top, 22).padding(.horizontal, 18)
@@ -281,24 +280,6 @@ struct DashboardView: View {
         .foregroundStyle(.secondary)
         .padding(.horizontal, 12).padding(.vertical, 7)
         .glassEffect()
-    }
-
-    // MARK: - Calibration Card (informational content — uses material, not Liquid Glass)
-    var calibrationCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("CALIBRATION")
-                .font(.system(size: 10, weight: .heavy)).foregroundColor(.appAccent).tracking(1.5)
-            (Text("Your ").foregroundColor(.primary)
-             + Text("starting weights").foregroundColor(.appAccent).bold()
-             + Text(" are estimates based on the information you provided. Any updates you make during your workout will help calibrate future workouts.").foregroundColor(.secondary))
-                .font(.system(size: 13)).lineSpacing(3)
-        }
-        .padding(16)
-        .background {
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color.appAccent.opacity(0.12))
-                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.appAccent.opacity(0.3), lineWidth: 1))
-        }
     }
 
     // MARK: - Exercise List
