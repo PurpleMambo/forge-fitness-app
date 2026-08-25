@@ -118,6 +118,15 @@ class WorkoutStore {
         todayLoggedSets(for: exercise).count
     }
 
+    func isWorkoutCompleted(_ workout: WorkoutDay, on date: Date) -> Bool {
+        let cal = Calendar.current
+        return workout.exercises.allSatisfy { ex in
+            entries.filter {
+                $0.exerciseName == ex.name && cal.isDate($0.date, inSameDayAs: date)
+            }.count >= ex.sets
+        }
+    }
+
     private func save() {
         if let data = try? JSONEncoder().encode(entries) {
             UserDefaults.standard.set(data, forKey: storageKey)
