@@ -41,6 +41,7 @@ struct DashboardView: View {
     @Namespace private var dayNamespace
     private let cal = Calendar.current
     @State private var showActiveWorkout = false
+    @State private var setupExercise: Exercise? = nil
 
     // Mon-Sun tuples for current week
     var weekDays: [(date: Date, letter: String, num: String, hasWorkout: Bool)] {
@@ -92,6 +93,19 @@ struct DashboardView: View {
             if let w = todayWorkout {
                 ActiveWorkoutView(workout: w, isPresented: $showActiveWorkout)
             }
+        }
+        .sheet(item: $setupExercise) { ex in
+            ExerciseSetupView(
+                exercise: ex,
+                workout: todayWorkout,
+                onStartWorkout: {
+                    setupExercise = nil
+                    Task {
+                        try? await Task.sleep(nanoseconds: 350_000_000)
+                        showActiveWorkout = true
+                    }
+                }
+            )
         }
     }
 
@@ -240,9 +254,7 @@ struct DashboardView: View {
     }
 
     func exerciseRow(_ ex: Exercise) -> some View {
-        NavigationLink {
-            ExerciseDetailView(exercise: ex)
-        } label: {
+        Button { setupExercise = ex } label: {
             HStack(spacing: 12) {
                 Image(systemName: ex.sfSymbol)
                     .font(.system(size: 20))

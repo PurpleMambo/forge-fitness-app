@@ -17,19 +17,25 @@ extension Bundle {
     }
 }
 
-// MARK: - Looping muted video (resizeAspectFill crops landscape → portrait)
+// MARK: - Looping video player (resizeAspectFill crops landscape → portrait)
+// isMuted is live-updated via updateUIView so a toggle in SwiftUI takes effect immediately.
 struct LoopingVideoPlayer: UIViewRepresentable {
     let url: URL
+    var isMuted: Bool = true
+    var isPlaying: Bool = true
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
     func makeUIView(context: Context) -> PlayerView {
         let view = PlayerView()
-        view.setURL(url, coordinator: context.coordinator)
+        view.setURL(url, isMuted: isMuted, coordinator: context.coordinator)
         return view
     }
 
-    func updateUIView(_ uiView: PlayerView, context: Context) {}
+    func updateUIView(_ uiView: PlayerView, context: Context) {
+        uiView.setMuted(isMuted)
+        uiView.setPlaying(isPlaying)
+    }
 
     class Coordinator {
         var observer: NSObjectProtocol?
@@ -40,10 +46,9 @@ struct LoopingVideoPlayer: UIViewRepresentable {
         }
     }
 
-    // PlayerView adds AVPlayerLayer as a sublayer and keeps it in sync via layoutSubviews.
-    // This is more reliable than override class var layerClass when used inside SwiftUI.
     class PlayerView: UIView {
         private let playerLayer = AVPlayerLayer()
+        private var shouldBePlaying = true
 
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -54,9 +59,9 @@ struct LoopingVideoPlayer: UIViewRepresentable {
 
         required init?(coder: NSCoder) { fatalError() }
 
-        func setURL(_ url: URL, coordinator: Coordinator) {
+        func setURL(_ url: URL, isMuted: Bool, coordinator: Coordinator) {
             let player = AVPlayer(url: url)
-            player.isMuted = true
+            player.isMuted = isMuted
             playerLayer.player = player
             coordinator.player = player
 
@@ -64,14 +69,25 @@ struct LoopingVideoPlayer: UIViewRepresentable {
                 forName: .AVPlayerItemDidPlayToEndTime,
                 object: player.currentItem,
                 queue: .main
-            ) { [weak player] _ in
-                player?.seek(to: .zero) { _ in player?.play() }
+            ) { [weak player, weak self] _ in
+                player?.seek(to: .zero) { _ in
+                    if self?.shouldBePlaying == true { player?.play() }
+                }
             }
 
             player.play()
         }
 
-        // Called every time SwiftUI resizes the view — keep the AVPlayerLayer in sync
+        func setMuted(_ muted: Bool) {
+            playerLayer.player?.isMuted = muted
+        }
+
+        func setPlaying(_ playing: Bool) {
+            shouldBePlaying = playing
+            guard let player = playerLayer.player else { return }
+            playing ? player.play() : player.pause()
+        }
+
         override func layoutSubviews() {
             super.layoutSubviews()
             playerLayer.frame = bounds
@@ -85,6 +101,8 @@ struct ExerciseDetailView: View {
     @Environment(\.dismiss) var dismiss
     @State private var selectedTab = 0
     @State private var showAllAliases = false
+    @State private var isMuted = false
+    @State private var isVideoPlaying = true
 
     private let tabs = ["Instructions", "Target", "Equipment"]
 
@@ -112,21 +130,39 @@ struct ExerciseDetailView: View {
             }
         }
         .toolbar(.hidden, for: .navigationBar)
+        // Full-screen video disabled — tap now pauses/resumes inline
+        // .fullScreenCover(isPresented: $showFullscreen) {
+        //     FullScreenVideoView(url: url)
+        // }
     }
 
     var heroSection: some View {
         ZStack(alignment: .bottomLeading) {
             if let resource = exercise.videoResource,
                let url = Bundle.main.videoURL(named: resource) {
-                LoopingVideoPlayer(url: url)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 320)
-                    .clipped()
-                    .overlay {
-                        LinearGradient(
-                            colors: [.clear, .black.opacity(0.55)],
-                            startPoint: .center, endPoint: .bottom)
-                    }
+                // Tapping the video pauses/resumes playback
+                Button { isVideoPlaying.toggle() } label: {
+                    LoopingVideoPlayer(url: url, isMuted: isMuted, isPlaying: isVideoPlaying)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 320)
+                        .clipped()
+                        .overlay {
+                            LinearGradient(
+                                colors: [.clear, .black.opacity(0.55)],
+                                startPoint: .center, endPoint: .bottom)
+                        }
+                        .overlay {
+                            if !isVideoPlaying {
+                                ZStack {
+                                    Color.black.opacity(0.25)
+                                    Image(systemName: "play.circle.fill")
+                                        .font(.system(size: 56))
+                                        .foregroundColor(.white.opacity(0.85))
+                                }
+                            }
+                        }
+                }
+                .buttonStyle(.plain)
             } else {
                 Rectangle()
                     .fill(LinearGradient(
@@ -161,6 +197,14 @@ struct ExerciseDetailView: View {
                         .foregroundColor(.secondary)
                 }
                 Spacer()
+                // Mute toggle
+                if exercise.videoResource != nil {
+                    Button { isMuted.toggle() } label: {
+                        Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                            .font(.system(size: 13, weight: .bold))
+                    }
+                    .buttonStyle(.glass)
+                }
                 Text("1.0 x")
                     .font(.system(size: 13, weight: .semibold))
                     .padding(.horizontal, 14).padding(.vertical, 7)
