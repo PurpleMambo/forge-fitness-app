@@ -66,6 +66,61 @@ class AppState {
     var userInitials = "GG"
     var planName = "Get Lean"
     var selectedDate = Date()
+    var workoutStore = WorkoutStore()
+}
+
+// MARK: - Workout Logging
+
+struct LoggedSetEntry: Codable, Identifiable {
+    var id = UUID()
+    var exerciseName: String
+    var reps: Int
+    var weight: Double
+    var weightUnit: String
+    var date: Date
+}
+
+@Observable
+class WorkoutStore {
+    private(set) var entries: [LoggedSetEntry] = []
+    private let storageKey = "workout_logged_sets_v1"
+
+    init() { load() }
+
+    func logSet(exercise: Exercise, reps: Int, weight: Double) {
+        entries.append(LoggedSetEntry(
+            exerciseName: exercise.name,
+            reps: reps,
+            weight: weight,
+            weightUnit: exercise.weightUnit,
+            date: Date()
+        ))
+        save()
+    }
+
+    func todayLoggedSets(for exercise: Exercise) -> [LoggedSetEntry] {
+        let cal = Calendar.current
+        return entries.filter {
+            $0.exerciseName == exercise.name && cal.isDateInToday($0.date)
+        }
+    }
+
+    func totalSetsLogged(for exercise: Exercise) -> Int {
+        todayLoggedSets(for: exercise).count
+    }
+
+    private func save() {
+        if let data = try? JSONEncoder().encode(entries) {
+            UserDefaults.standard.set(data, forKey: storageKey)
+        }
+    }
+
+    private func load() {
+        guard let data = UserDefaults.standard.data(forKey: storageKey),
+              let decoded = try? JSONDecoder().decode([LoggedSetEntry].self, from: data)
+        else { return }
+        entries = decoded
+    }
 }
 
 // MARK: - Sample Data
