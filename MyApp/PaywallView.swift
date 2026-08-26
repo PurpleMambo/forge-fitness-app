@@ -18,11 +18,11 @@ struct ForgePaywallView: View {
     // MARK: - Products
 
     private var yearlyProduct: Product? {
-        storeVM.subscriptions.first { $0.id == "forge.subscription.yearly" }
+        storeVM.subscriptions.first { $0.id == "themuscleclub.subscription.yearly" }
     }
 
     private var weeklyProduct: Product? {
-        storeVM.subscriptions.first { $0.id == "forge.subscription.weekly" }
+        storeVM.subscriptions.first { $0.id == "themuscleclub.subscription.weekly" }
     }
 
     private var selectedProduct: Product? {

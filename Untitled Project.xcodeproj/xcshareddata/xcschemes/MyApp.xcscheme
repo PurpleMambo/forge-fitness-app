@@ -50,7 +50,7 @@
          </BuildableReference>
       </BuildableProductRunnable>
       <StoreKitConfigurationFileReference
-         identifier = "../../MyApp/Forge.storekit">
+         identifier = "../../Themuscleclub.storekit">
       </StoreKitConfigurationFileReference>
    </LaunchAction>
    <ProfileAction

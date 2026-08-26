@@ -6,8 +6,13 @@
 	objectVersion = 90;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		4C711DCE303F515600B10F5E /* Themuscleclub.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 4C711DCD303F515600B10F5E /* Themuscleclub.storekit */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		000000000000000000000120 /* MyApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MyApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4C711DCD303F515600B10F5E /* Themuscleclub.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Themuscleclub.storekit; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -30,6 +35,7 @@
 		000000000000000000000001 = {
 			isa = PBXGroup;
 			children = (
+				4C711DCD303F515600B10F5E /* Themuscleclub.storekit */,
 				000000000000000000000010 /* MyApp */,
 				000000000000000000000020 /* Products */,
 			);
@@ -102,6 +108,7 @@
 		000000000000000140000000 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
+				4C711DCE303F515600B10F5E /* Themuscleclub.storekit in Resources */,
 			);
 		};
 /* End PBXResourcesBuildPhase section */

@@ -1,5 +1,6 @@
 import Foundation
 import StoreKit
+import UIKit
 
 @Observable
 @MainActor
@@ -11,8 +12,8 @@ final class StoreVM {
 
     // Match these exactly with your App Store Connect product IDs
     private let productIds = [
-        "forge.subscription.yearly",
-        "forge.subscription.weekly"
+        "themuscleclub.subscription.yearly",
+        "themuscleclub.subscription.weekly"
     ]
 
     private var updateListenerTask: Task<Void, Never>?
@@ -35,11 +36,29 @@ final class StoreVM {
     }
 
     func requestProducts() async {
-        subscriptions = (try? await Product.products(for: productIds)) ?? []
+        do {
+            subscriptions = try await Product.products(for: productIds)
+        } catch {
+            print("⚠️ StoreVM: failed to load products — \(error)")
+            subscriptions = []
+        }
     }
 
     func purchase(_ product: Product) async throws -> StoreKit.Transaction? {
-        let result = try await product.purchase()
+        // iOS 17+ requires an explicit UIWindowScene for the purchase sheet to appear.
+        let scene = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first { $0.activationState == .foregroundActive }
+            ?? UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .first
+
+        let result: Product.PurchaseResult
+        if let scene {
+            result = try await product.purchase(confirmIn: scene)
+        } else {
+            result = try await product.purchase()
+        }
         switch result {
         case .success(let verification):
             let transaction = try checkVerified(verification)
