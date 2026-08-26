@@ -139,6 +139,7 @@ struct DashboardView: View {
     @Namespace private var dayNamespace
     private let cal = Calendar.current
     @State private var setupExercise: Exercise? = nil
+    @State private var showSwitchSheet = false
 
     private static let completedGreen = Color(red: 0.3, green: 0.85, blue: 0.45)
 
@@ -230,6 +231,12 @@ struct DashboardView: View {
                 )
             }
         }
+        .sheet(isPresented: $showSwitchSheet) {
+            SwitchSheetView()
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(Color(red: 0.08, green: 0.05, blue: 0.12))
+        }
     }
 
     // MARK: - Weekday Strip
@@ -299,13 +306,14 @@ struct DashboardView: View {
                 }
                 Spacer()
                 HStack(spacing: 8) {
-                    Button {  } label: {
+                    Button { showSwitchSheet = true } label: {
                         HStack(spacing: 5) {
                             Image(systemName: "arrow.2.squarepath").font(.system(size: 12, weight: .bold))
                             Text("Switch").font(.system(size: 14, weight: .semibold))
                         }
                     }
-                    .buttonStyle(.glass(.regular.tint(.appAccent)))
+                    .buttonStyle(.glassProminent)
+                    .tint(.appAccent)
 
                     Button {  } label: { Image(systemName: "ellipsis") }
                         .buttonStyle(.glass)
