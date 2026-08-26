@@ -18,15 +18,11 @@ struct ForgePaywallView: View {
     // MARK: - Products
 
     private var yearlyProduct: Product? {
-        storeVM.subscriptions.first { p in
-            p.subscription?.subscriptionPeriod.map { $0.unit == .year && $0.value == 1 } ?? p.id.contains("yearly")
-        }
+        storeVM.subscriptions.first { $0.id == "forge.subscription.yearly" }
     }
 
     private var weeklyProduct: Product? {
-        storeVM.subscriptions.first { p in
-            p.subscription?.subscriptionPeriod.map { $0.unit == .week && $0.value == 1 } ?? p.id.contains("weekly")
-        }
+        storeVM.subscriptions.first { $0.id == "forge.subscription.weekly" }
     }
 
     private var selectedProduct: Product? {
@@ -331,27 +327,27 @@ struct ForgePaywallView: View {
     }
 
     private var ctaButton: some View {
-        Button {
-            guard !isProcessing else { return }
-            guard let product = selectedProduct else {
-                errorMessage = "Products are still loading. Please try again in a moment."
-                showError = true
-                return
-            }
+        let isBusy = isProcessing || storeVM.isLoading
+        return Button {
+            guard !isBusy else { return }
+            guard let product = selectedProduct else { return }
             isProcessing = true
             Task {
-                defer { isProcessing = false }
                 do {
                     let transaction = try await storeVM.purchase(product)
+                    isProcessing = false
+                    // complete() if purchase returned a transaction directly,
+                    // onChange handles the case where hasActiveSubscription fires first.
                     if transaction != nil { complete() }
                 } catch {
+                    isProcessing = false
                     errorMessage = error.localizedDescription
                     showError = true
                 }
             }
         } label: {
             ZStack {
-                if isProcessing {
+                if isBusy {
                     ProgressView().tint(.white)
                 } else {
                     Text(selectedPlan == .yearly && yearlyHasTrial ? "Start free trial" : "Start training")
@@ -364,7 +360,7 @@ struct ForgePaywallView: View {
         }
         .buttonStyle(.glassProminent)
         .tint(.appAccent)
-        .disabled(isProcessing)
+        .disabled(isBusy)
     }
 
     // MARK: - Fine print + legal

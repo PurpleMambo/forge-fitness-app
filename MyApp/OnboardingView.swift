@@ -185,7 +185,7 @@ private let steps: [OStep] = [
 struct OnboardingView: View {
     @Environment(AppState.self) var appState
 
-    enum Phase { case chat, loading, plan, signup }
+    enum Phase { case chat, loading, plan, signup, paywall }
 
     @State private var phase: Phase = .chat
     @State private var step = 0
@@ -204,7 +204,8 @@ struct OnboardingView: View {
             case .chat:    chatBody.transition(.opacity)
             case .loading: PlanCalculatingView { withAnimation { phase = .plan } }.transition(.opacity)
             case .plan:    PlanSummaryView { withAnimation { phase = .signup } }.transition(.opacity)
-            case .signup:  SignUpView { appState.onboardingComplete = true }.transition(.opacity)
+            case .signup:  SignUpView { withAnimation { phase = .paywall } }.transition(.opacity)
+            case .paywall: ForgePaywallView { appState.onboardingComplete = true }.transition(.opacity)
             }
         }
         .animation(.easeInOut(duration: 0.4), value: phase)
