@@ -205,7 +205,7 @@ struct OnboardingView: View {
             case .loading: PlanCalculatingView { withAnimation { phase = .plan } }.transition(.opacity)
             case .plan:    PlanSummaryView { withAnimation { phase = .signup } }.transition(.opacity)
             case .signup:  SignUpView { withAnimation { phase = .paywall } }.transition(.opacity)
-            case .paywall: ForgePaywallView { appState.onboardingComplete = true }.transition(.opacity)
+            case .paywall: MuscleClubPaywallView { appState.onboardingComplete = true }.transition(.opacity)
             }
         }
         .animation(.easeInOut(duration: 0.4), value: phase)
@@ -302,7 +302,7 @@ struct OnboardingView: View {
 
             Spacer()
 
-            Text("FORGE")
+            Text("MUSCLE CLUB")
                 .font(.system(size: 20, weight: .black)).tracking(6)
                 .foregroundColor(.white.opacity(0.08))
 
@@ -507,7 +507,7 @@ struct PlanSummaryView: View {
                         Button { } label: { Image(systemName: "chevron.left").font(.system(size: 14, weight: .bold)) }
                             .buttonStyle(.glass)
                         Spacer()
-                        Text("FORGE").font(.system(size: 20, weight: .black)).tracking(6)
+                        Text("MUSCLE CLUB").font(.system(size: 20, weight: .black)).tracking(6)
                             .foregroundColor(.white.opacity(0.08))
                         Spacer()
                         Image(systemName: "chevron.left").hidden()

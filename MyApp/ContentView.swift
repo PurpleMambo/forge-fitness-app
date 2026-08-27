@@ -26,7 +26,7 @@ struct RootView: View {
         Group {
             #if DEBUG
             if debugPaywall {
-                ForgePaywallView { debugPaywall = false; appState.onboardingComplete = true }
+                MuscleClubPaywallView { debugPaywall = false; appState.onboardingComplete = true }
             } else {
                 routing
             }

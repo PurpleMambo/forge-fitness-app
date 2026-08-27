@@ -15,7 +15,7 @@ struct WelcomeView: View {
                         .font(.system(size: 64, weight: .heavy))
                         .foregroundColor(.appAccent)
 
-                    Text("FORGE")
+                    Text("MUSCLE CLUB")
                         .font(.system(size: 52, weight: .heavy))
                         .tracking(5)
 

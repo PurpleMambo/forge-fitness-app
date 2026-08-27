@@ -1,7 +1,7 @@
 import SwiftUI
 import StoreKit
 
-struct ForgePaywallView: View {
+struct MuscleClubPaywallView: View {
     let onDismiss: () -> Void
 
     @Environment(StoreVM.self) private var storeVM
@@ -129,7 +129,7 @@ struct ForgePaywallView: View {
 
     private var headerSection: some View {
         VStack(spacing: 10) {
-            Text("FORGE")
+            Text("MUSCLE CLUB")
                 .font(.system(size: 22, weight: .black)).tracking(8)
                 .foregroundColor(.white.opacity(0.9))
 
@@ -401,6 +401,6 @@ struct ForgePaywallView: View {
 }
 
 #Preview {
-    ForgePaywallView(onDismiss: {})
+    MuscleClubPaywallView(onDismiss: {})
         .environment(StoreVM())
 }
