@@ -7,12 +7,22 @@ struct NewOnboardingStep: Identifiable {
     enum Input {
         case options([String])
         case textField(placeholder: String, numeric: Bool = false)
+        case numberPicker(min: Int, max: Int, unit: String, defaultValue: Int)
+        case stringPicker([String])
     }
     let icon: String
     let title: String
     let subtitle: String
     let input: Input
 }
+
+let worldClassIcelandLocations: [String] = [
+    "Smáralind", "Laugar", "Mjódd", "Suðurlandsbraut",
+    "Grafarvogur", "Breiðholt", "Garðabær", "Hafnarfjörður",
+    "Mosfellsbær", "Álftanes", "Keflavík", "Akureyri",
+    "Selfoss", "Borgarnes", "Ísafjörður", "Egilsstaðir",
+    "Sauðárkrókur", "Hvolsvöllur", "Höfn í Hornafirði", "Vík"
+]
 
 let newOnboardingSteps: [NewOnboardingStep] = [
     .init(id: 0, icon: "target",
@@ -30,15 +40,15 @@ let newOnboardingSteps: [NewOnboardingStep] = [
     .init(id: 3, icon: "scalemass.fill",
           title: "What's your current weight?",
           subtitle: "In kilograms, approximate.",
-          input: .textField(placeholder: "e.g. 80", numeric: true)),
+          input: .numberPicker(min: 40, max: 200, unit: "kg", defaultValue: 80)),
     .init(id: 4, icon: "ruler.fill",
           title: "What's your height?",
           subtitle: "In centimetres.",
-          input: .textField(placeholder: "e.g. 180", numeric: true)),
+          input: .numberPicker(min: 140, max: 220, unit: "cm", defaultValue: 175)),
     .init(id: 5, icon: "flag.fill",
           title: "What's your goal weight?",
           subtitle: "In kilograms, approximate.",
-          input: .textField(placeholder: "e.g. 75", numeric: true)),
+          input: .numberPicker(min: 40, max: 200, unit: "kg", defaultValue: 75)),
     .init(id: 6, icon: "dumbbell.fill",
           title: "Which best describes your current training routine?",
           subtitle: "Be honest — we'll calibrate from where you are.",
@@ -67,12 +77,12 @@ let newOnboardingSteps: [NewOnboardingStep] = [
                            "At home with limited equipment", "I don't have any equipment"])),
     .init(id: 12, icon: "mappin.circle.fill",
           title: "Which gym do you train at?",
-          subtitle: "Type the gym name, or N/A if not applicable.",
-          input: .textField(placeholder: "e.g. World Class, Life, Planet Fitness")),
+          subtitle: "Select your main gym.",
+          input: .options(["World Class", "SportHúsið", "Katla Fitnes", "Other"])),
     .init(id: 13, icon: "map.fill",
-          title: "Which World Class location do you use most?",
-          subtitle: "Type N/A if you don't train at World Class.",
-          input: .textField(placeholder: "e.g. Smáralind, Laugar — or N/A")),
+          title: "Which World Class location?",
+          subtitle: "Pick the one you visit most often.",
+          input: .stringPicker(worldClassIcelandLocations)),
     .init(id: 14, icon: "repeat",
           title: "How many days a week can you train?",
           subtitle: "Be realistic — consistency beats intensity.",
@@ -138,6 +148,15 @@ final class NewOnboardingFlowViewModel {
     var phase: Phase = .questions(0)
     var isGoingBack = false
     var answers: [String] = []
+    var gymAnswer: String = ""
+
+    // Look up by step ID so the indices stay correct if step order ever changes.
+    private var gymStepArrIdx: Int {
+        newOnboardingSteps.firstIndex(where: { $0.id == 12 }) ?? 12
+    }
+    private var wcLocStepArrIdx: Int {
+        newOnboardingSteps.firstIndex(where: { $0.id == 13 }) ?? 13
+    }
 
     var questionnaireProgress: Double {
         guard case let .questions(i) = phase else { return 1.0 }
@@ -151,10 +170,15 @@ final class NewOnboardingFlowViewModel {
 
     func pick(_ answer: String) {
         isGoingBack = false
+        guard case let .questions(i) = phase else { return }
+        if i == gymStepArrIdx { gymAnswer = answer }
         answers.append(answer)
         withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
-            guard case let .questions(i) = phase else { return }
-            let next = i + 1
+            var next = i + 1
+            // Skip the World Class location step if the user picked a different gym.
+            if i == gymStepArrIdx && answer != "World Class" {
+                next = wcLocStepArrIdx + 1
+            }
             phase = next < newOnboardingSteps.count ? .questions(next) : .calculating
         }
     }
@@ -181,7 +205,12 @@ final class NewOnboardingFlowViewModel {
         withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
             guard case let .questions(i) = phase, i > 0 else { return }
             if !answers.isEmpty { answers.removeLast() }
-            phase = .questions(i - 1)
+            var prev = i - 1
+            // Skip back over the World Class location step if gym isn't World Class.
+            if prev == wcLocStepArrIdx && gymAnswer != "World Class" {
+                prev = gymStepArrIdx
+            }
+            phase = .questions(prev)
         }
     }
 }

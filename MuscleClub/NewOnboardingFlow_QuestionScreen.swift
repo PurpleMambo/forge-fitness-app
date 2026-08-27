@@ -5,10 +5,30 @@ struct NewOnboardingFlow_QuestionScreen: View {
     let model: NewOnboardingFlowViewModel
     let step: NewOnboardingStep
 
-    @State private var textInput = ""
-    @State private var selectedOption: String? = nil
+    @State private var textInput: String
+    @State private var selectedOption: String?
+    @State private var selectedNumber: Int
+    @State private var selectedString: String
 
-    private let haptic = UIImpactFeedbackGenerator(style: .medium)
+    private let haptic = UIImpactFeedbackGenerator(style: .heavy)
+
+    init(model: NewOnboardingFlowViewModel, step: NewOnboardingStep) {
+        self.model = model
+        self.step = step
+        _textInput = State(initialValue: "")
+        _selectedOption = State(initialValue: nil)
+        switch step.input {
+        case .numberPicker(_, _, _, let defaultValue):
+            _selectedNumber = State(initialValue: defaultValue)
+            _selectedString = State(initialValue: "")
+        case .stringPicker(let options):
+            _selectedNumber = State(initialValue: 0)
+            _selectedString = State(initialValue: options.first ?? "")
+        default:
+            _selectedNumber = State(initialValue: 0)
+            _selectedString = State(initialValue: "")
+        }
+    }
 
     private var stepIndex: Int {
         guard case let .questions(i) = model.phase else { return 0 }
@@ -17,16 +37,16 @@ struct NewOnboardingFlow_QuestionScreen: View {
 
     private var canContinue: Bool {
         switch step.input {
-        case .options:    return selectedOption != nil
-        case .textField:  return !textInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case .options:                return selectedOption != nil
+        case .textField:              return !textInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case .numberPicker, .stringPicker: return true
         }
     }
 
-    // Character limit per field type
     private var charLimit: Int {
         switch step.input {
         case .textField(_, let numeric): return numeric ? 6 : 50
-        case .options:                   return 0
+        case .options, .numberPicker, .stringPicker: return 0
         }
     }
 
@@ -59,7 +79,7 @@ struct NewOnboardingFlow_QuestionScreen: View {
                         .foregroundStyle(.white.opacity(0.65))
                         .padding(.bottom, 4)
 
-                    // Input — options or text field
+                    // Input — options, text field, or native pickers
                     switch step.input {
                     case .options(let opts):
                         VStack(spacing: 10) {
@@ -82,6 +102,31 @@ struct NewOnboardingFlow_QuestionScreen: View {
                             .padding(.horizontal, 18)
                             .padding(.vertical, 16)
                             .glassEffect(in: .rect(cornerRadius: 14))
+
+                    case .numberPicker(let minVal, let maxVal, let unit, _):
+                        VStack(spacing: 0) {
+                            Picker("", selection: $selectedNumber) {
+                                ForEach(minVal...maxVal, id: \.self) { n in
+                                    Text(unit.isEmpty ? "\(n)" : "\(n) \(unit)")
+                                        .tag(n)
+                                }
+                            }
+                            .pickerStyle(.wheel)
+                            .frame(height: 200)
+                        }
+                        .glassEffect(in: .rect(cornerRadius: 18))
+
+                    case .stringPicker(let options):
+                        VStack(spacing: 0) {
+                            Picker("", selection: $selectedString) {
+                                ForEach(options, id: \.self) { opt in
+                                    Text(opt).tag(opt)
+                                }
+                            }
+                            .pickerStyle(.wheel)
+                            .frame(height: 200)
+                        }
+                        .glassEffect(in: .rect(cornerRadius: 18))
                     }
                 }
                 .padding(.horizontal, 24)
@@ -91,7 +136,7 @@ struct NewOnboardingFlow_QuestionScreen: View {
             .scrollDismissesKeyboard(.interactively)
             .scrollBounceBehavior(.basedOnSize)
         }
-        // Single pinned CTA — same for both options and text field modes
+        // Single pinned CTA — same for all input modes
         .safeAreaInset(edge: .bottom) {
             ctaPanel
         }
@@ -159,13 +204,23 @@ struct NewOnboardingFlow_QuestionScreen: View {
             .frame(height: 36)
             .allowsHitTesting(false)
 
-            Button("Continue") {
+            Button {
                 haptic.impactOccurred()
                 commitAnswer()
+            } label: {
+                HStack(spacing: 10) {
+                    Text("Continue")
+                        .fontWeight(.semibold)
+                    Image(systemName: "arrow.right")
+                        .fontWeight(.semibold)
+                }
+                .font(.title3)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 6)
             }
             .buttonStyle(.glassProminent)
             .tint(.appAccent)
-            .frame(maxWidth: .infinity)
+            .controlSize(.extraLarge)
             .disabled(!canContinue)
             .padding(.horizontal, 24)
             .padding(.bottom, 32)
@@ -186,6 +241,11 @@ struct NewOnboardingFlow_QuestionScreen: View {
             guard !trimmed.isEmpty else { return }
             textInput = ""
             model.pick(trimmed)
+        case .numberPicker(_, _, let unit, _):
+            let answer = unit.isEmpty ? "\(selectedNumber)" : "\(selectedNumber) \(unit)"
+            model.pick(answer)
+        case .stringPicker:
+            model.pick(selectedString)
         }
     }
 }
