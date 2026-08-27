@@ -249,3 +249,66 @@ struct NewOnboardingFlow_QuestionScreen: View {
         }
     }
 }
+
+// MARK: - Previews
+
+#Preview("Options step") {
+    ZStack {
+        AppBackground()
+        NewOnboardingFlow_QuestionScreen(
+            model: NewOnboardingFlowViewModel(),
+            step: newOnboardingSteps[0]
+        )
+    }
+    .preferredColorScheme(.dark)
+}
+
+#Preview("Number picker — weight") {
+    ZStack {
+        AppBackground()
+        NewOnboardingFlow_QuestionScreen(
+            model: NewOnboardingFlowViewModel(),
+            step: newOnboardingSteps[3]
+        )
+    }
+    .preferredColorScheme(.dark)
+}
+
+#Preview("Number picker — height") {
+    ZStack {
+        AppBackground()
+        NewOnboardingFlow_QuestionScreen(
+            model: NewOnboardingFlowViewModel(),
+            step: newOnboardingSteps[4]
+        )
+    }
+    .preferredColorScheme(.dark)
+}
+
+#Preview("Gym picker") {
+    ZStack {
+        AppBackground()
+        NewOnboardingFlow_QuestionScreen(
+            model: NewOnboardingFlowViewModel(),
+            step: newOnboardingSteps[12]
+        )
+    }
+    .preferredColorScheme(.dark)
+}
+
+#Preview("World Class locations") {
+    ZStack {
+        AppBackground()
+        NewOnboardingFlow_QuestionScreen(
+            model: NewOnboardingFlowViewModel(),
+            step: newOnboardingSteps[13]
+        )
+    }
+    .preferredColorScheme(.dark)
+}
+
+#Preview("Full onboarding flow") {
+    NewOnboardingFlowView()
+        .environment(AppState())
+        .preferredColorScheme(.dark)
+}
