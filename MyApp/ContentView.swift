@@ -24,7 +24,7 @@ struct RootView: View {
             } else if appState.onboardingComplete {
                 MainTabView()
             } else {
-                OnboardingView()
+                NewOnboardingFlowView()
             }
         }
         .preferredColorScheme(.dark)
