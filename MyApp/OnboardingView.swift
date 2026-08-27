@@ -202,9 +202,9 @@ struct OnboardingView: View {
             AppBackground()
             switch phase {
             case .chat:    chatBody.transition(.opacity)
-            case .loading: PlanCalculatingView { withAnimation { phase = .plan } }.transition(.opacity)
-            case .plan:    PlanSummaryView { withAnimation { phase = .signup } }.transition(.opacity)
-            case .signup:  SignUpView { withAnimation { phase = .paywall } }.transition(.opacity)
+            case .loading: PlanCalculatingView { withAnimation { phase = .signup } }.transition(.opacity)
+            case .signup:  SignUpView { withAnimation { phase = .plan } }.transition(.opacity)
+            case .plan:    PlanSummaryView { withAnimation { phase = .paywall } }.transition(.opacity)
             case .paywall: MuscleClubPaywallView { appState.onboardingComplete = true }.transition(.opacity)
             }
         }
@@ -638,83 +638,3 @@ struct PlanSummaryView: View {
     }
 }
 
-// MARK: - Sign Up View
-struct SignUpView: View {
-    let onComplete: () -> Void
-
-    var body: some View {
-        ZStack {
-            AppBackground()
-
-            VStack(spacing: 0) {
-                Spacer()
-
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Button { } label: { Image(systemName: "chevron.left").font(.system(size: 14, weight: .bold)) }
-                            .buttonStyle(.glass)
-                        Spacer()
-                    }
-                    .padding(.bottom, 28)
-
-                    Text("Your custom workout\nprogram is ready")
-                        .font(.system(size: 30, weight: .heavy)).foregroundColor(.white).lineSpacing(2)
-                    Text("Sign up below to save your profile and start training.")
-                        .font(.system(size: 15)).foregroundColor(.secondary).padding(.top, 8)
-                }
-                .padding(.horizontal, 28)
-
-                Spacer()
-
-                VStack(spacing: 12) {
-                    // Social sign-in buttons — glass style
-                    GlassEffectContainer(spacing: 8) {
-                        VStack(spacing: 10) {
-                            Button {  } label: {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "apple.logo").font(.system(size: 16, weight: .semibold))
-                                    Text("Sign up with Apple").font(.system(size: 16, weight: .semibold))
-                                }
-                                .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.glass)
-
-                            Button {  } label: {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "g.circle.fill").font(.system(size: 16, weight: .semibold))
-                                    Text("Sign up with Google").font(.system(size: 16, weight: .semibold))
-                                }
-                                .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.glass)
-                        }
-                    }
-
-                    // Primary CTA — prominent glass with accent tint
-                    Button("Continue with Email", action: onComplete)
-                        .buttonStyle(.glassProminent)
-                        .tint(.appAccent)
-                        .frame(maxWidth: .infinity)
-
-                    HStack {
-                        Rectangle().fill(Color.white.opacity(0.15)).frame(height: 1)
-                        Text("OR").font(.system(size: 12, weight: .medium)).foregroundColor(.secondary).padding(.horizontal, 8)
-                        Rectangle().fill(Color.white.opacity(0.15)).frame(height: 1)
-                    }
-                    .padding(.vertical, 2)
-
-                    Button("Log in with existing account", action: onComplete)
-                        .buttonStyle(.glass)
-                        .frame(maxWidth: .infinity)
-
-                    (Text("By signing up, you agree to our ").foregroundColor(.secondary)
-                     + Text("Privacy Policy").foregroundColor(.appAccent)
-                     + Text(" and ").foregroundColor(.secondary)
-                     + Text("Terms & Conditions").foregroundColor(.appAccent))
-                        .font(.system(size: 12)).multilineTextAlignment(.center).padding(.top, 6)
-                }
-                .padding(.horizontal, 24).padding(.bottom, 48)
-            }
-        }
-    }
-}

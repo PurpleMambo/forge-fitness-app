@@ -46,8 +46,10 @@ struct SignUpView: View {
                         onComplete()
                     } label: {
                         HStack(spacing: 10) {
-                            Image(systemName: "g.circle.fill")
-                                .font(.system(size: 22))
+                            Image("google_logo")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 22, height: 22)
                             Text("Sign up with Google")
                                 .fontWeight(.semibold)
                         }
