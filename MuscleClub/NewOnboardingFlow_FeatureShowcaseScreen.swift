@@ -33,7 +33,7 @@ struct NewOnboardingFlow_FeatureShowcaseScreen: View {
                     Text("EXCLUSIVE TO MEMBERS")
                         .font(.caption.weight(.bold))
                         .tracking(1.5)
-                        .foregroundStyle(.appGold)
+                        .foregroundStyle(Color.appGold)
                         .padding(.horizontal, 16).padding(.vertical, 7)
                         .glassEffect(.regular.tint(.appGold.opacity(0.2)), in: .capsule)
 

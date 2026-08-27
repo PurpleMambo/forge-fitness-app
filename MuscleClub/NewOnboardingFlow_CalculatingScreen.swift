@@ -23,7 +23,7 @@ struct NewOnboardingFlow_CalculatingScreen: View {
                     .scaleEffect(pulseScale)
                 Image(systemName: "bolt.fill")
                     .font(.system(size: 62, weight: .heavy))
-                    .foregroundStyle(.appAccent)
+                    .foregroundStyle(Color.appAccent)
             }
             .padding(.bottom, 48)
 
@@ -35,7 +35,7 @@ struct NewOnboardingFlow_CalculatingScreen: View {
                     .foregroundStyle(.white)
                 Text("custom plan…")
                     .font(.system(size: 34, weight: .bold))
-                    .foregroundStyle(.appAccent)
+                    .foregroundStyle(Color.appAccent)
             }
             .multilineTextAlignment(.center)
             .padding(.horizontal, 28)

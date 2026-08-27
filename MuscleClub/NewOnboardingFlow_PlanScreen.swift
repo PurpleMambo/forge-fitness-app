@@ -20,7 +20,7 @@ struct NewOnboardingFlow_PlanScreen: View {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("YOUR CUSTOM PLAN")
                             .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(.appGold)
+                            .foregroundStyle(Color.appGold)
                             .tracking(2)
 
                         Text(planTitle)
@@ -46,7 +46,7 @@ struct NewOnboardingFlow_PlanScreen: View {
                         HStack {
                             Text("Your Training Week")
                                 .font(.system(size: 18, weight: .bold))
-                                .foregroundStyle(.appGold)
+                                .foregroundStyle(Color.appGold)
                             Spacer()
                             Image(systemName: "info.circle").foregroundStyle(.secondary)
                         }
@@ -72,7 +72,7 @@ struct NewOnboardingFlow_PlanScreen: View {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Why this plan works")
                             .font(.system(size: 18, weight: .bold))
-                            .foregroundStyle(.appGold)
+                            .foregroundStyle(Color.appGold)
                         benefitRow(icon: "bolt.fill",
                                    title: "Structured for serious progress",
                                    sub: "Follow a plan built around your goal, experience, schedule, and recovery.")
@@ -88,7 +88,7 @@ struct NewOnboardingFlow_PlanScreen: View {
                     VStack(spacing: 6) {
                         Text("🏆").font(.system(size: 32))
                         (Text("Join ").foregroundStyle(.secondary)
-                         + Text("475k+ members").foregroundStyle(.appAccent).bold()
+                         + Text("475k+ members").foregroundStyle(Color.appAccent).bold()
                          + Text(" building strength and training smarter.").foregroundStyle(.secondary))
                             .font(.system(size: 14)).multilineTextAlignment(.center)
                     }
@@ -146,7 +146,7 @@ struct NewOnboardingFlow_PlanScreen: View {
             Spacer()
             Image(systemName: symbol)
                 .font(.system(size: 44))
-                .foregroundStyle(active ? .appAccent : Color.secondary.opacity(0.3))
+                .foregroundStyle(active ? Color.appAccent : Color.secondary.opacity(0.3))
         }
         .padding(18)
         .glassEffect(active ? .regular.tint(.appAccent) : .regular, in: .rect(cornerRadius: 16))
@@ -162,7 +162,7 @@ struct NewOnboardingFlow_PlanScreen: View {
     private func benefitRow(icon: String, title: String, sub: String) -> some View {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: icon)
-                .font(.system(size: 15, weight: .bold)).foregroundStyle(.appAccent)
+                .font(.system(size: 15, weight: .bold)).foregroundStyle(Color.appAccent)
                 .frame(width: 36, height: 36)
                 .glassEffect(.regular.tint(.appAccent), in: .circle)
             VStack(alignment: .leading, spacing: 4) {
