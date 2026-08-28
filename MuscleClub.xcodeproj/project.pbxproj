@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4C39DD213040FFEA0080ED0A /* DotLottie in Frameworks */ = {isa = PBXBuildFile; productRef = 4C39DD203040FFEA0080ED0A /* DotLottie */; };
+		4C39DD233040FFEA0080ED0A /* DotLottiePlayer in Frameworks */ = {isa = PBXBuildFile; productRef = 4C39DD223040FFEA0080ED0A /* DotLottiePlayer */; };
 		4C711DCE303F515600B10F5E /* Themuscleclub.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 4C711DCD303F515600B10F5E /* Themuscleclub.storekit */; };
 /* End PBXBuildFile section */
 
@@ -27,6 +29,8 @@
 		000000000000000130000000 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				4C39DD233040FFEA0080ED0A /* DotLottiePlayer in Frameworks */,
+				4C39DD213040FFEA0080ED0A /* DotLottie in Frameworks */,
 			);
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -66,6 +70,10 @@
 				000000000000000000000010 /* MuscleClub */,
 			);
 			name = MuscleClub;
+			packageProductDependencies = (
+				4C39DD203040FFEA0080ED0A /* DotLottie */,
+				4C39DD223040FFEA0080ED0A /* DotLottiePlayer */,
+			);
 			productName = MyApp;
 			productReference = 000000000000000000000120 /* MuscleClub.app */;
 			productType = "com.apple.product-type.application";
@@ -94,6 +102,9 @@
 			);
 			mainGroup = 000000000000000000000001;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				4C39DD1F3040FFEA0080ED0A /* XCRemoteSwiftPackageReference "dotlottie-ios" */,
+			);
 			preferredProjectObjectVersion = 90;
 			productRefGroup = 000000000000000000000020 /* Products */;
 			projectDirPath = "";
@@ -354,6 +365,30 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		4C39DD1F3040FFEA0080ED0A /* XCRemoteSwiftPackageReference "dotlottie-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/LottieFiles/dotlottie-ios";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		4C39DD203040FFEA0080ED0A /* DotLottie */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4C39DD1F3040FFEA0080ED0A /* XCRemoteSwiftPackageReference "dotlottie-ios" */;
+			productName = DotLottie;
+		};
+		4C39DD223040FFEA0080ED0A /* DotLottiePlayer */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4C39DD1F3040FFEA0080ED0A /* XCRemoteSwiftPackageReference "dotlottie-ios" */;
+			productName = DotLottiePlayer;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 000000000000000000000000 /* Project object */;
 }

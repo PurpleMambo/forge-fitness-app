@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import DotLottie
 
 /// Press-and-hold commitment screen. The screen bleeds crimson as the user
 /// charges the ring; at full charge a celebration plays, then the paywall appears.
@@ -14,6 +15,10 @@ struct NewOnboardingFlow_CommitStepView: View {
     @State private var holdTask: Task<Void, Never>? = nil
     @State private var showPaywall = false
     @State private var figureScale: CGFloat = 1.0
+    @StateObject private var confettiLottie = DotLottieAnimation(
+        fileName: "confetti(2)",
+        config: AnimationConfig(autoplay: false, loop: false, speed: 1.0)
+    )
 
     private let hapticLight   = UIImpactFeedbackGenerator(style: .light)
     private let hapticMedium  = UIImpactFeedbackGenerator(style: .medium)
@@ -153,6 +158,10 @@ struct NewOnboardingFlow_CommitStepView: View {
         ZStack {
             Color.appAccent.ignoresSafeArea()
 
+            confettiLottie.view()
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+
             VStack(spacing: 0) {
                 Spacer()
 
@@ -177,6 +186,7 @@ struct NewOnboardingFlow_CommitStepView: View {
                     .animation(.spring(response: 0.5, dampingFraction: 0.78), value: celebrationVisible)
             }
         }
+        .onAppear { _ = confettiLottie.play() }
     }
 
     // MARK: - Hold logic

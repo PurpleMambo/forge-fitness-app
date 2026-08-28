@@ -137,6 +137,8 @@ let newOnboardingSteps: [NewOnboardingStep] = [
 final class NewOnboardingFlowViewModel {
     enum Phase: Equatable {
         case questions(Int)
+        case goalSpeed
+        case sleep
         case calculating
         case plan
         case socialProof
@@ -149,6 +151,8 @@ final class NewOnboardingFlowViewModel {
     var isGoingBack = false
     var answers: [String] = []
     var gymAnswer: String = ""
+    var goalSpeedAnswer: String = "Balanced"
+    var sleepDurationAnswer: String = ""
 
     // Look up by step ID so the indices stay correct if step order ever changes.
     private var gymStepArrIdx: Int {
@@ -156,6 +160,12 @@ final class NewOnboardingFlowViewModel {
     }
     private var wcLocStepArrIdx: Int {
         newOnboardingSteps.firstIndex(where: { $0.id == 13 }) ?? 13
+    }
+    private var goalWeightStepArrIdx: Int {
+        newOnboardingSteps.firstIndex(where: { $0.id == 5 }) ?? 5
+    }
+    private var injuriesStepArrIdx: Int {
+        newOnboardingSteps.firstIndex(where: { $0.id == 17 }) ?? 17
     }
 
     var questionnaireProgress: Double {
@@ -179,7 +189,13 @@ final class NewOnboardingFlowViewModel {
             if i == gymStepArrIdx && answer != "World Class" {
                 next = wcLocStepArrIdx + 1
             }
-            phase = next < newOnboardingSteps.count ? .questions(next) : .calculating
+            if i == goalWeightStepArrIdx {
+                phase = .goalSpeed
+            } else if i == injuriesStepArrIdx {
+                phase = .sleep
+            } else {
+                phase = next < newOnboardingSteps.count ? .questions(next) : .calculating
+            }
         }
     }
 
@@ -190,6 +206,8 @@ final class NewOnboardingFlowViewModel {
             case .questions(let i):
                 let next = i + 1
                 phase = next < newOnboardingSteps.count ? .questions(next) : .calculating
+            case .goalSpeed:        phase = .questions(goalWeightStepArrIdx + 1)
+            case .sleep:            phase = .questions(injuriesStepArrIdx + 1)
             case .calculating:      phase = .plan
             case .plan:             phase = .socialProof
             case .socialProof:      phase = .signUp
@@ -203,14 +221,34 @@ final class NewOnboardingFlowViewModel {
     func goBack() {
         isGoingBack = true
         withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
-            guard case let .questions(i) = phase, i > 0 else { return }
-            if !answers.isEmpty { answers.removeLast() }
-            var prev = i - 1
-            // Skip back over the World Class location step if gym isn't World Class.
-            if prev == wcLocStepArrIdx && gymAnswer != "World Class" {
-                prev = gymStepArrIdx
+            switch phase {
+            case .questions(let i):
+                guard i > 0 else { return }
+                // If the previous thing in the flow was a custom screen, go back to it (no pop).
+                if i == goalWeightStepArrIdx + 1 {
+                    phase = .goalSpeed
+                } else if i == injuriesStepArrIdx + 1 {
+                    phase = .sleep
+                } else {
+                    if !answers.isEmpty { answers.removeLast() }
+                    var prev = i - 1
+                    // Skip back over the World Class location step if gym isn't World Class.
+                    if prev == wcLocStepArrIdx && gymAnswer != "World Class" {
+                        prev = gymStepArrIdx
+                    }
+                    phase = .questions(prev)
+                }
+            case .goalSpeed:
+                // Pop the goal-weight answer so the user can re-answer it.
+                if !answers.isEmpty { answers.removeLast() }
+                phase = .questions(goalWeightStepArrIdx)
+            case .sleep:
+                // Pop the injuries answer so the user can re-answer it.
+                if !answers.isEmpty { answers.removeLast() }
+                phase = .questions(injuriesStepArrIdx)
+            default:
+                break
             }
-            phase = .questions(prev)
         }
     }
 }
@@ -235,6 +273,12 @@ struct NewOnboardingFlowView: View {
         case .questions(let i):
             NewOnboardingFlow_QuestionScreen(model: model, step: newOnboardingSteps[i])
                 .id(i)
+                .transition(slideTransition)
+        case .goalSpeed:
+            NewOnboardingFlow_GoalSpeedScreen(model: model)
+                .transition(slideTransition)
+        case .sleep:
+            NewOnboardingFlow_SleepStep(model: model)
                 .transition(slideTransition)
         case .calculating:
             NewOnboardingFlow_CalculatingScreen(model: model)

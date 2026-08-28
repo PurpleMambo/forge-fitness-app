@@ -1,31 +1,23 @@
 import SwiftUI
+import DotLottie
 
 struct NewOnboardingFlow_CalculatingScreen: View {
     let model: NewOnboardingFlowViewModel
 
     @State private var progress: Double = 0
     @State private var statusText = "Analyzing your fitness profile…"
-    @State private var pulseScale: CGFloat = 1.0
+    @StateObject private var gymLottie = DotLottieAnimation(
+        fileName: "gymh(1)",
+        config: AnimationConfig(autoplay: true, loop: true, speed: 1.0)
+    )
 
     var body: some View {
         VStack(spacing: 0) {
             Spacer()
 
-            // Pulsing bolt icon
-            ZStack {
-                Circle()
-                    .fill(Color.appAccent.opacity(0.10))
-                    .frame(width: 160, height: 160)
-                    .scaleEffect(pulseScale)
-                Circle()
-                    .fill(Color.appAccent.opacity(0.05))
-                    .frame(width: 210, height: 210)
-                    .scaleEffect(pulseScale)
-                Image(systemName: "bolt.fill")
-                    .font(.system(size: 62, weight: .heavy))
-                    .foregroundStyle(Color.appAccent)
-            }
-            .padding(.bottom, 48)
+            gymLottie.view()
+                .frame(width: 220, height: 220)
+                .padding(.bottom, 48)
 
             Spacer()
 
@@ -64,11 +56,6 @@ struct NewOnboardingFlow_CalculatingScreen: View {
                 .animation(.easeInOut(duration: 0.3), value: statusText)
 
             Spacer()
-        }
-        .onAppear {
-            withAnimation(.easeInOut(duration: 1.3).repeatForever(autoreverses: true)) {
-                pulseScale = 1.18
-            }
         }
         .task { await run() }
     }

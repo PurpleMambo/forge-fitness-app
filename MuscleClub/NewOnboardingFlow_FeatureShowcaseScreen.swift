@@ -1,4 +1,5 @@
 import SwiftUI
+import DotLottie
 
 struct NewOnboardingFlow_FeatureShowcaseScreen: View {
     let model: NewOnboardingFlowViewModel
@@ -55,6 +56,7 @@ struct NewOnboardingFlow_FeatureShowcaseScreen: View {
                             ForEach(features.indices, id: \.self) { i in
                                 featureCard(features[i])
                             }
+                            SupplementsFeatureCard()
                         }
                         .padding(.horizontal, 24)
                         .padding(.vertical, 2)
@@ -112,5 +114,36 @@ struct NewOnboardingFlow_FeatureShowcaseScreen: View {
         .frame(width: 150, height: 188, alignment: .topLeading)
         .padding(14)
         .glassEffect(.regular, in: .rect(cornerRadius: 20))
+    }
+}
+
+// MARK: - Supplements card (uses DotLottie, needs @StateObject so lives in its own struct)
+
+private struct SupplementsFeatureCard: View {
+    @StateObject private var lottie = DotLottieAnimation(
+        fileName: "Supplements for fines and diets(1)",
+        config: AnimationConfig(autoplay: true, loop: true, speed: 0.8)
+    )
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            lottie.view()
+                .frame(width: 44, height: 44)
+                .clipShape(.rect(cornerRadius: 10))
+
+            Spacer(minLength: 0)
+
+            Text("Supplement Stack")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primary)
+
+            Text("Personalized supplement tips to support your recovery and performance.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(3, reservesSpace: true)
+        }
+        .frame(width: 150, height: 188, alignment: .topLeading)
+        .padding(14)
+        .glassEffect(.regular.tint(Color.appGold.opacity(0.15)), in: .rect(cornerRadius: 20))
     }
 }
