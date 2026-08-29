@@ -139,6 +139,7 @@ final class NewOnboardingFlowViewModel {
         case questions(Int)
         case goalSpeed
         case sleep
+        case supplements
         case calculating
         case plan
         case socialProof
@@ -153,6 +154,8 @@ final class NewOnboardingFlowViewModel {
     var gymAnswer: String = ""
     var goalSpeedAnswer: String = "Balanced"
     var sleepDurationAnswer: String = ""
+    var sleepGoalsAnswer: Set<String> = []
+    var supplementsAnswer: String = ""
 
     // Look up by step ID so the indices stay correct if step order ever changes.
     private var gymStepArrIdx: Int {
@@ -166,6 +169,9 @@ final class NewOnboardingFlowViewModel {
     }
     private var injuriesStepArrIdx: Int {
         newOnboardingSteps.firstIndex(where: { $0.id == 17 }) ?? 17
+    }
+    private var supplementsStepArrIdx: Int {
+        newOnboardingSteps.firstIndex(where: { $0.id == 18 }) ?? 18
     }
 
     var questionnaireProgress: Double {
@@ -207,7 +213,8 @@ final class NewOnboardingFlowViewModel {
                 let next = i + 1
                 phase = next < newOnboardingSteps.count ? .questions(next) : .calculating
             case .goalSpeed:        phase = .questions(goalWeightStepArrIdx + 1)
-            case .sleep:            phase = .questions(injuriesStepArrIdx + 1)
+            case .sleep:            phase = .supplements
+            case .supplements:      phase = .questions(supplementsStepArrIdx + 1)
             case .calculating:      phase = .plan
             case .plan:             phase = .socialProof
             case .socialProof:      phase = .signUp
@@ -215,6 +222,15 @@ final class NewOnboardingFlowViewModel {
             case .featureShowcase:  phase = .commit
             case .commit:           break
             }
+        }
+    }
+
+    func supplementsPick(_ answer: String) {
+        isGoingBack = false
+        supplementsAnswer = answer
+        answers.append(answer)
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
+            phase = .questions(supplementsStepArrIdx + 1)
         }
     }
 
@@ -229,6 +245,9 @@ final class NewOnboardingFlowViewModel {
                     phase = .goalSpeed
                 } else if i == injuriesStepArrIdx + 1 {
                     phase = .sleep
+                } else if i == supplementsStepArrIdx + 1 {
+                    if !answers.isEmpty { answers.removeLast() }
+                    phase = .supplements
                 } else {
                     if !answers.isEmpty { answers.removeLast() }
                     var prev = i - 1
@@ -246,6 +265,8 @@ final class NewOnboardingFlowViewModel {
                 // Pop the injuries answer so the user can re-answer it.
                 if !answers.isEmpty { answers.removeLast() }
                 phase = .questions(injuriesStepArrIdx)
+            case .supplements:
+                phase = .sleep
             default:
                 break
             }
@@ -279,6 +300,9 @@ struct NewOnboardingFlowView: View {
                 .transition(slideTransition)
         case .sleep:
             NewOnboardingFlow_SleepStep(model: model)
+                .transition(slideTransition)
+        case .supplements:
+            NewOnboardingFlow_SupplementsStep(model: model)
                 .transition(slideTransition)
         case .calculating:
             NewOnboardingFlow_CalculatingScreen(model: model)
