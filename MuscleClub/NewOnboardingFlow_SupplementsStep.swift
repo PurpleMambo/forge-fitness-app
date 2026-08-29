@@ -137,33 +137,33 @@ struct NewOnboardingFlow_SupplementsStep: View {
             .frame(height: 36)
             .allowsHitTesting(false)
 
-            Button {
-                model.supplementsPick(selected)
-            } label: {
-                HStack(spacing: 10) {
-                    Text("Continue")
-                        .fontWeight(.semibold)
-                    Image(systemName: "arrow.right")
-                        .fontWeight(.semibold)
+            VStack(spacing: 12) {
+                Button {
+                    model.supplementsPick(selected)
+                } label: {
+                    HStack(spacing: 10) {
+                        Text("Continue")
+                            .fontWeight(.semibold)
+                        Image(systemName: "arrow.right")
+                            .fontWeight(.semibold)
+                    }
+                    .font(.title3)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
                 }
-                .font(.title3)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 6)
-            }
-            .buttonStyle(.glassProminent)
-            .tint(.appGold)
-            .controlSize(.extraLarge)
-            .disabled(selected.isEmpty)
-            .padding(.horizontal, 24)
-            .background(Color.appBg)
+                .buttonStyle(.glassProminent)
+                .tint(.appGold)
+                .controlSize(.extraLarge)
+                .disabled(selected.isEmpty)
+                .padding(.horizontal, 24)
 
-            Button("Skip for now") {
-                model.supplementsPick("")
+                Button("Skip for now") {
+                    model.supplementsPick("")
+                }
+                .font(.subheadline)
+                .foregroundStyle(.white.opacity(0.5))
+                .padding(.bottom, 32)
             }
-            .font(.subheadline)
-            .foregroundStyle(.white.opacity(0.5))
-            .padding(.top, 12)
-            .padding(.bottom, 28)
             .background(Color.appBg)
         }
     }
