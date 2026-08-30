@@ -17,10 +17,10 @@ There are no tests yet.
 
 ### App entry & global state
 
-`ContentView.swift` is the entry point (`@main MyApp`). It creates a single `AppState` instance and injects it via `.environment()`. `RootView` has a three-state gate:
+`ContentView.swift` is the entry point (`@main MyApp`). It creates a single `AppState` and `StoreVM` instance, both injected via `.environment()`. `RootView` has a three-state gate:
 
 1. `!appState.welcomeSeen` → `WelcomeView`
-2. `!appState.onboardingComplete` → `OnboardingView`
+2. `!appState.onboardingComplete` → `NewOnboardingFlowView`
 3. otherwise → `MainTabView`
 
 `AppState` (in `Models.swift`) is an `@Observable` class — the only shared mutable state. Key fields:
@@ -34,13 +34,19 @@ There are no tests yet.
 
 `Exercise` and `WorkoutDay` are plain structs. All workout data is hardcoded as static properties on `WorkoutDay` (`pushDay`, `pullDay`, `legDay`, `weekSchedule`). `WorkoutStore` persists `[LoggedSetEntry]` to `UserDefaults` (key `workout_logged_sets_v1`). There is no networking layer.
 
-### Onboarding flow (`OnboardingView.swift`)
+### Onboarding flow (`NewOnboardingFlowView.swift`)
 
-Three phases driven by a `Phase` enum: `.chat` → `.plan` → `.signup`.
+`NewOnboardingFlowView` is the active onboarding. It owns a `NewOnboardingFlowViewModel` (`@Observable`) which drives all navigation via a `Phase` enum:
 
-- `.chat`: Steps through an array of `OStep` values (question parts + answer options). Each answer is appended to `answers: [String]`. Animations use `busy` flag to prevent double-taps.
-- `.plan`: `PlanSummaryView` — static summary screen.
-- `.signup`: `SignUpView` — sets `appState.onboardingComplete = true` to exit onboarding.
+```
+.questions(Int) → .goalSpeed → .sleep → .supplements
+→ .questions(…) → .calculating → .plan → .socialProof
+→ .signUp → .featureShowcase → .commit
+```
+
+The 25-step questionnaire is defined in `newOnboardingSteps: [NewOnboardingStep]` (keyed by stable `id: Int`). The VM skips the World Class location step (id 13) when a different gym is chosen, and inserts `.goalSpeed`, `.sleep`, and `.supplements` custom screens at fixed branch points. `isGoingBack` flips the slide transition direction. `NewOnboardingFlow_CommitStepView` closes onboarding by setting `appState.onboardingComplete = true`.
+
+`OnboardingView.swift` is an older chat-bubble onboarding — it is **no longer used** (replaced by `NewOnboardingFlowView`).
 
 ### Main app flow (`DashboardView.swift`)
 
@@ -74,6 +80,19 @@ Three phases driven by a `Phase` enum: `.chat` → `.plan` → `.signup`.
 `LoopingVideoPlayer` is a `UIViewRepresentable` wrapping `AVPlayer` with `AVPlayerLayer`. It loops via `AVPlayerItemDidPlayToEndTime` notification.
 
 `Bundle.videoURL(named:)` is a custom helper that handles Unicode NFC/NFD filename normalization — needed because the bundled `.mov` files have Icelandic names. Always use this helper instead of `Bundle.main.url(forResource:withExtension:)` when loading video.
+
+### In-app purchases (`StoreVM.swift` / `PaywallView.swift`)
+
+`StoreVM` is an `@Observable @MainActor` class injected at the root alongside `AppState`. It manages two auto-renewable subscriptions:
+
+| Product ID | Plan |
+|---|---|
+| `themuscleclub.subscription.yearly` | Annual |
+| `themuscleclub.subscription.weekly` | Weekly |
+
+Key state: `hasActiveSubscription: Bool`, `hasLoadedEntitlements: Bool`, `isLoading: Bool`. A background `Task` listens to `StoreKit.Transaction.updates` for the lifetime of the app.
+
+`MuscleClubPaywallView` reads `StoreVM` from the environment and calls `storeVM.purchase(_:)`. Completion is detected two ways — the `purchase()` return value and an `onChange(of: storeVM.hasActiveSubscription)` observer — guarded by a `didComplete` flag to prevent double-firing.
 
 ### Design system
 

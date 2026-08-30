@@ -10,6 +10,12 @@
 		4C39DD213040FFEA0080ED0A /* DotLottie in Frameworks */ = {isa = PBXBuildFile; productRef = 4C39DD203040FFEA0080ED0A /* DotLottie */; };
 		4C39DD233040FFEA0080ED0A /* DotLottiePlayer in Frameworks */ = {isa = PBXBuildFile; productRef = 4C39DD223040FFEA0080ED0A /* DotLottiePlayer */; };
 		4C711DCE303F515600B10F5E /* Themuscleclub.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 4C711DCD303F515600B10F5E /* Themuscleclub.storekit */; };
+		4CF1114230448A29006D13AB /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 4CF1114130448A29006D13AB /* Auth */; };
+		4CF1114430448A29006D13AB /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 4CF1114330448A29006D13AB /* Functions */; };
+		4CF1114630448A29006D13AB /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 4CF1114530448A29006D13AB /* PostgREST */; };
+		4CF1114830448A29006D13AB /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 4CF1114730448A29006D13AB /* Realtime */; };
+		4CF1114A30448A29006D13AB /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 4CF1114930448A29006D13AB /* Storage */; };
+		4CF1114C30448A29006D13AB /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 4CF1114B30448A29006D13AB /* Supabase */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -17,9 +23,22 @@
 		4C711DCD303F515600B10F5E /* Themuscleclub.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Themuscleclub.storekit; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		4CF1114F3044903F006D13AB /* Exceptions for "MuscleClub" folder in "MuscleClub" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 000000000000000100000000 /* MuscleClub */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		000000000000000000000010 /* MuscleClub */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				4CF1114F3044903F006D13AB /* Exceptions for "MuscleClub" folder in "MuscleClub" target */,
+			);
 			path = MuscleClub;
 			sourceTree = "<group>";
 		};
@@ -31,6 +50,12 @@
 			files = (
 				4C39DD233040FFEA0080ED0A /* DotLottiePlayer in Frameworks */,
 				4C39DD213040FFEA0080ED0A /* DotLottie in Frameworks */,
+				4CF1114A30448A29006D13AB /* Storage in Frameworks */,
+				4CF1114430448A29006D13AB /* Functions in Frameworks */,
+				4CF1114C30448A29006D13AB /* Supabase in Frameworks */,
+				4CF1114830448A29006D13AB /* Realtime in Frameworks */,
+				4CF1114230448A29006D13AB /* Auth in Frameworks */,
+				4CF1114630448A29006D13AB /* PostgREST in Frameworks */,
 			);
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -73,6 +98,12 @@
 			packageProductDependencies = (
 				4C39DD203040FFEA0080ED0A /* DotLottie */,
 				4C39DD223040FFEA0080ED0A /* DotLottiePlayer */,
+				4CF1114130448A29006D13AB /* Auth */,
+				4CF1114330448A29006D13AB /* Functions */,
+				4CF1114530448A29006D13AB /* PostgREST */,
+				4CF1114730448A29006D13AB /* Realtime */,
+				4CF1114930448A29006D13AB /* Storage */,
+				4CF1114B30448A29006D13AB /* Supabase */,
 			);
 			productName = MyApp;
 			productReference = 000000000000000000000120 /* MuscleClub.app */;
@@ -104,6 +135,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				4C39DD1F3040FFEA0080ED0A /* XCRemoteSwiftPackageReference "dotlottie-ios" */,
+				4CF1114030448A29006D13AB /* XCRemoteSwiftPackageReference "supabase-swift" */,
 			);
 			preferredProjectObjectVersion = 90;
 			productRefGroup = 000000000000000000000020 /* Products */;
@@ -268,6 +300,7 @@
 		000000000000000111000000 /* Debug configuration for PBXNativeTarget "MuscleClub" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = MuscleClub/MuscleClub.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Y5BVZY6QVD;
@@ -275,6 +308,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MuscleClub/Info.plist;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -308,6 +342,7 @@
 		000000000000000112000000 /* Release configuration for PBXNativeTarget "MuscleClub" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = MuscleClub/MuscleClub.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Y5BVZY6QVD;
@@ -315,6 +350,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MuscleClub/Info.plist;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -375,6 +411,16 @@
 				kind = branch;
 			};
 		};
+		4CF1114030448A29006D13AB /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+			traits = (
+			);
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -387,6 +433,36 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 4C39DD1F3040FFEA0080ED0A /* XCRemoteSwiftPackageReference "dotlottie-ios" */;
 			productName = DotLottiePlayer;
+		};
+		4CF1114130448A29006D13AB /* Auth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4CF1114030448A29006D13AB /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Auth;
+		};
+		4CF1114330448A29006D13AB /* Functions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4CF1114030448A29006D13AB /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Functions;
+		};
+		4CF1114530448A29006D13AB /* PostgREST */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4CF1114030448A29006D13AB /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = PostgREST;
+		};
+		4CF1114730448A29006D13AB /* Realtime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4CF1114030448A29006D13AB /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Realtime;
+		};
+		4CF1114930448A29006D13AB /* Storage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4CF1114030448A29006D13AB /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Storage;
+		};
+		4CF1114B30448A29006D13AB /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4CF1114030448A29006D13AB /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
