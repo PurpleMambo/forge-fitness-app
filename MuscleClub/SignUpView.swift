@@ -2,6 +2,9 @@ import SwiftUI
 import AuthenticationServices
 import CryptoKit
 import Supabase
+import GoogleSignIn
+
+private let googleiOSClientID = "837041480144-s8juc3a72qjc1u3te945e28kvnne5e4u.apps.googleusercontent.com"
 
 struct SignUpView: View {
     let onComplete: () -> Void
@@ -130,7 +133,7 @@ struct SignUpView: View {
         }
     }
 
-    // MARK: - Google OAuth
+    // MARK: - Google Sign In (native SDK — no browser popup)
 
     @MainActor
     private func signInWithGoogle() async {
@@ -138,42 +141,37 @@ struct SignUpView: View {
         defer { isLoading = false }
         errorMessage = ""
 
+        guard let rootVC = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first?.keyWindow?.rootViewController else {
+            errorMessage = "No window available"
+            return
+        }
+
         do {
-            try await supabase.auth.signInWithOAuth(
-                provider: .google,
-                redirectTo: URL(string: "muscleclub://login-callback")!
-            ) { url in
-                try await withCheckedThrowingContinuation { continuation in
-                    Task { @MainActor in
-                        let webSession = ASWebAuthenticationSession(
-                            url: url,
-                            callbackURLScheme: "muscleclub"
-                        ) { callbackURL, error in
-                            if let error {
-                                continuation.resume(throwing: error)
-                            } else if let callbackURL {
-                                continuation.resume(returning: callbackURL)
-                            } else {
-                                continuation.resume(throwing: URLError(.cancelled))
-                            }
-                        }
-                        WebAuthContext.shared.activeSession = webSession
-                        webSession.presentationContextProvider = WebAuthContext.shared
-                        webSession.prefersEphemeralWebBrowserSession = false
-                        webSession.start()
-                    }
-                }
+            GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: googleiOSClientID)
+            let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: rootVC)
+
+            guard let idToken = result.user.idToken?.tokenString else {
+                errorMessage = "Missing Google ID token"
+                return
             }
+
+            try await supabase.auth.signInWithIdToken(credentials: .init(
+                provider: .google,
+                idToken: idToken,
+                accessToken: result.user.accessToken.tokenString
+            ))
             appState.isAuthenticated = true
             onComplete()
-        } catch let error as ASWebAuthenticationSessionError where error.code == .canceledLogin {
-            // user dismissed — nothing to show
         } catch {
-            errorMessage = error.localizedDescription
+            if (error as? GIDSignInError)?.code != .canceled {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
-    // MARK: - Nonce helpers
+    // MARK: - Nonce helpers (Apple Sign In)
 
     private func randomNonceString(length: Int = 32) -> String {
         let charset = "0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._"
@@ -186,20 +184,6 @@ struct SignUpView: View {
         SHA256.hash(data: Data(input.utf8))
             .map { String(format: "%02x", $0) }
             .joined()
-    }
-}
-
-// MARK: - ASWebAuthenticationSession context provider
-
-private final class WebAuthContext: NSObject, ASWebAuthenticationPresentationContextProviding {
-    static let shared = WebAuthContext()
-    var activeSession: ASWebAuthenticationSession?
-
-    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        let scene = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .first!
-        return scene.keyWindow ?? UIWindow(windowScene: scene)
     }
 }
 

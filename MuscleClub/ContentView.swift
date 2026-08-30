@@ -1,5 +1,6 @@
 import SwiftUI
 import Playgrounds
+import GoogleSignIn
 
 @main struct MyApp: App {
     @State private var appState      = AppState()
@@ -39,6 +40,9 @@ struct RootView: View {
         }
         .preferredColorScheme(.dark)
         .task { await appState.checkSession() }
+        .onOpenURL { url in
+            GIDSignIn.sharedInstance.handle(url)
+        }
         #if DEBUG
         .overlay(alignment: .topTrailing) {
             Button("Sign Up →") { showDebugSignUp = true }
