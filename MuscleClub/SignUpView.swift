@@ -1,8 +1,15 @@
 import SwiftUI
 import AuthenticationServices
+import CryptoKit
+import Supabase
 
 struct SignUpView: View {
     let onComplete: () -> Void
+
+    @Environment(AppState.self) private var appState
+    @State private var currentNonce = ""
+    @State private var isLoading = false
+    @State private var errorMessage = ""
 
     var body: some View {
         ZStack {
@@ -30,28 +37,44 @@ struct SignUpView: View {
                 }
                 .padding(.horizontal, 28)
 
+                if !errorMessage.isEmpty {
+                    Text(errorMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                        .multilineTextAlignment(.center)
+                        .padding(.top, 16)
+                        .padding(.horizontal, 28)
+                }
+
                 Spacer()
 
                 VStack(spacing: 14) {
                     SignInWithAppleButton(.signUp) { request in
+                        currentNonce = randomNonceString()
                         request.requestedScopes = [.fullName, .email]
-                    } onCompletion: { _ in
-                        onComplete()
+                        request.nonce = sha256(currentNonce)
+                    } onCompletion: { result in
+                        Task { await handleAppleCompletion(result) }
                     }
                     .signInWithAppleButtonStyle(.white)
                     .frame(height: 54)
                     .clipShape(.capsule)
+                    .disabled(isLoading)
 
                     Button {
-                        onComplete()
+                        Task { await signInWithGoogle() }
                     } label: {
                         HStack(spacing: 10) {
-                            Image("google_logo")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 22, height: 22)
-                            Text("Sign up with Google")
-                                .fontWeight(.semibold)
+                            if isLoading {
+                                ProgressView().tint(Color.appAccent)
+                            } else {
+                                Image("google_logo")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 22, height: 22)
+                                Text("Sign up with Google")
+                                    .fontWeight(.semibold)
+                            }
                         }
                         .font(.title3)
                         .frame(maxWidth: .infinity)
@@ -61,22 +84,127 @@ struct SignUpView: View {
                     .tint(.white)
                     .foregroundStyle(Color.appAccent)
                     .controlSize(.extraLarge)
+                    .disabled(isLoading)
 
-                    Button("Not now") {
-                        onComplete()
-                    }
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.55))
-                    .padding(.top, 6)
+                    Button("Not now") { onComplete() }
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.55))
+                        .padding(.top, 6)
+                        .disabled(isLoading)
                 }
                 .padding(.horizontal, 28)
                 .padding(.bottom, 48)
             }
         }
     }
+
+    // MARK: - Apple Sign In
+
+    @MainActor
+    private func handleAppleCompletion(_ result: Result<ASAuthorization, Error>) async {
+        guard case .success(let auth) = result,
+              let credential = auth.credential as? ASAuthorizationAppleIDCredential,
+              let tokenData = credential.identityToken,
+              let idToken = String(data: tokenData, encoding: .utf8)
+        else {
+            if case .failure(let error) = result {
+                errorMessage = error.localizedDescription
+            }
+            return
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+        errorMessage = ""
+
+        do {
+            try await supabase.auth.signInWithIdToken(credentials: .init(
+                provider: .apple,
+                idToken: idToken,
+                nonce: currentNonce
+            ))
+            appState.isAuthenticated = true
+            onComplete()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    // MARK: - Google OAuth
+
+    @MainActor
+    private func signInWithGoogle() async {
+        isLoading = true
+        defer { isLoading = false }
+        errorMessage = ""
+
+        do {
+            try await supabase.auth.signInWithOAuth(
+                provider: .google,
+                redirectTo: URL(string: "muscleclub://login-callback")!
+            ) { url in
+                try await withCheckedThrowingContinuation { continuation in
+                    Task { @MainActor in
+                        let webSession = ASWebAuthenticationSession(
+                            url: url,
+                            callbackURLScheme: "muscleclub"
+                        ) { callbackURL, error in
+                            if let error {
+                                continuation.resume(throwing: error)
+                            } else if let callbackURL {
+                                continuation.resume(returning: callbackURL)
+                            } else {
+                                continuation.resume(throwing: URLError(.cancelled))
+                            }
+                        }
+                        WebAuthContext.shared.activeSession = webSession
+                        webSession.presentationContextProvider = WebAuthContext.shared
+                        webSession.prefersEphemeralWebBrowserSession = false
+                        webSession.start()
+                    }
+                }
+            }
+            appState.isAuthenticated = true
+            onComplete()
+        } catch let error as ASWebAuthenticationSessionError where error.code == .canceledLogin {
+            // user dismissed — nothing to show
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    // MARK: - Nonce helpers
+
+    private func randomNonceString(length: Int = 32) -> String {
+        let charset = "0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._"
+        var bytes = [UInt8](repeating: 0, count: length)
+        _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        return String(bytes.map { charset[charset.index(charset.startIndex, offsetBy: Int($0) % charset.count)] })
+    }
+
+    private func sha256(_ input: String) -> String {
+        SHA256.hash(data: Data(input.utf8))
+            .map { String(format: "%02x", $0) }
+            .joined()
+    }
+}
+
+// MARK: - ASWebAuthenticationSession context provider
+
+private final class WebAuthContext: NSObject, ASWebAuthenticationPresentationContextProviding {
+    static let shared = WebAuthContext()
+    var activeSession: ASWebAuthenticationSession?
+
+    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        let scene = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first!
+        return scene.keyWindow ?? UIWindow(windowScene: scene)
+    }
 }
 
 #Preview {
     SignUpView(onComplete: {})
+        .environment(AppState())
         .preferredColorScheme(.dark)
 }

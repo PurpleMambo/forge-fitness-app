@@ -1,6 +1,7 @@
 import SwiftUI
 import Foundation
 import Observation
+import Supabase
 
 // MARK: - Colors
 extension Color {
@@ -68,6 +69,18 @@ class AppState {
     var selectedDate = Date()
     var workoutStore = WorkoutStore()
     var showActiveWorkout = false
+    var isAuthenticated = false
+    var sessionCheckComplete = false
+
+    @MainActor
+    func checkSession() async {
+        isAuthenticated = (try? await supabase.auth.session) != nil
+        if isAuthenticated {
+            welcomeSeen = true
+            onboardingComplete = true
+        }
+        sessionCheckComplete = true
+    }
 
     var todayWorkout: WorkoutDay? {
         let cal = Calendar.current
@@ -203,9 +216,9 @@ extension WorkoutDay {
                 primaryMuscles: ["Quadriceps", "Glutes"],
                 secondaryMuscles: ["Hamstrings", "Core"],
                 equipmentList: ["Barbell", "Squat Rack"]),
-            Exercise(name: "Romanian Deadlift", sets: 3, reps: 10, weight: 60,  weightUnit: "kg", muscleGroup: "Hamstrings",isFocus: false, sfSymbol: "figure.strengthtraining.traditional"),
-            Exercise(name: "Leg Press",         sets: 3, reps: 12, weight: 120, weightUnit: "kg", muscleGroup: "Quads",     isFocus: false, sfSymbol: "figure.strengthtraining.functional"),
-            Exercise(name: "Calf Raise",        sets: 4, reps: 15, weight: 60,  weightUnit: "kg", muscleGroup: "Calves",    isFocus: false, sfSymbol: "figure.walk"),
+            Exercise(name: "Romanian Deadlift", sets: 3, reps: 10, weight: 60,  weightUnit: "kg", muscleGroup: "Hamstrings", isFocus: false, sfSymbol: "figure.strengthtraining.traditional"),
+            Exercise(name: "Leg Press",         sets: 3, reps: 12, weight: 120, weightUnit: "kg", muscleGroup: "Quads",      isFocus: false, sfSymbol: "figure.strengthtraining.functional"),
+            Exercise(name: "Calf Raise",        sets: 4, reps: 15, weight: 60,  weightUnit: "kg", muscleGroup: "Calves",     isFocus: false, sfSymbol: "figure.walk"),
         ],
         durationMinutes: 50, gymType: "Large Gym", muscleGroups: ["Quads", "Hamstrings"]
     )
