@@ -12,6 +12,14 @@
 				<string>muscleclub</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.google.googleSignIn</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.837041480144-s8juc3a72qjc1u3te945e28kvnne5e4u</string>
+			</array>
+		</dict>
 	</array>
 </dict>
 </plist>
