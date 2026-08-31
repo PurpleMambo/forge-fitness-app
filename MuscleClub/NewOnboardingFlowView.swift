@@ -29,6 +29,10 @@ let newOnboardingSteps: [NewOnboardingStep] = [
           title: "What's your top fitness goal?",
           subtitle: "We'll build your entire plan around this.",
           input: .options(["Lift heavier", "Build more muscle", "Get lean and defined", "Lose weight"])),
+    .init(id: 25, icon: "person.crop.circle",
+          title: "What's your biological sex?",
+          subtitle: "Used to assign the right training program for you.",
+          input: .options(["Male", "Female"])),
     .init(id: 1, icon: "person.fill",
           title: "What's your full name?",
           subtitle: "So we can personalise your experience.",
@@ -179,9 +183,20 @@ final class NewOnboardingFlowViewModel {
         return Double(i) / Double(newOnboardingSteps.count)
     }
 
-    var firstName: String {
+    var genderAnswer: String {
         guard answers.count > 1 else { return "" }
-        return answers[1].components(separatedBy: " ").first ?? answers[1]
+        return answers[1]
+    }
+
+    var selectedProgramId: UUID {
+        genderAnswer == "Female"
+            ? UUID(uuidString: "a0000000-0000-0000-0000-000000000002")!
+            : UUID(uuidString: "a0000000-0000-0000-0000-000000000001")!
+    }
+
+    var firstName: String {
+        guard answers.count > 2 else { return "" }
+        return answers[2].components(separatedBy: " ").first ?? answers[2]
     }
 
     func pick(_ answer: String) {
@@ -314,7 +329,7 @@ struct NewOnboardingFlowView: View {
             NewOnboardingFlow_SocialProofScreen(model: model)
                 .transition(.opacity)
         case .signUp:
-            SignUpView { model.advance() }
+            SignUpView(programId: model.selectedProgramId) { model.advance() }
                 .transition(slideTransition)
         case .featureShowcase:
             NewOnboardingFlow_FeatureShowcaseScreen(model: model)

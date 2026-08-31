@@ -57,6 +57,7 @@ struct RootView: View {
         .fullScreenCover(isPresented: $showDebugSignUp) {
             SignUpView(onComplete: { showDebugSignUp = false })
                 .environment(appState)
+                .environment(programService)
         }
         #endif
     }

@@ -136,6 +136,7 @@ private struct AnimatedCheckmark: View {
 // MARK: - Dashboard View
 struct DashboardView: View {
     @Environment(AppState.self) var appState
+    @Environment(ProgramService.self) private var programService
     @Namespace private var dayNamespace
     private let cal = Calendar.current
     @State private var setupExercise: Exercise? = nil
@@ -178,7 +179,10 @@ struct DashboardView: View {
                     VStack(spacing: 0) {
                         weekStrip.padding(.top, 14)
 
-                        if let w = appState.todayWorkout {
+                        if appState.isAuthenticated && programService.isLoading {
+                            ProgressView()
+                                .padding(.top, 48)
+                        } else if let w = appState.todayWorkout {
                             workoutCard(w).padding(.top, 24).padding(.horizontal, 18)
                             exerciseSection(w).padding(.top, 16).padding(.horizontal, 18)
                         } else {
@@ -237,6 +241,26 @@ struct DashboardView: View {
                 .presentationDragIndicator(.visible)
                 .presentationBackground(Color(red: 0.08, green: 0.05, blue: 0.12))
         }
+        .task { await loadTodayExercises() }
+        .onChange(of: appState.selectedDate) { Task { await loadTodayExercises() } }
+        .onChange(of: programService.userProgram?.id) { Task { await loadTodayExercises() } }
+    }
+
+    private func loadTodayExercises() async {
+        guard let template = programService.todayTemplate(for: appState.selectedDate) else {
+            appState.remoteWorkout = nil
+            return
+        }
+        let remoteExs = await programService.exercises(for: template.id)
+        let exercises = remoteExs.compactMap { $0.toExercise() }
+        let muscleGroups = Array(Set(exercises.map(\.muscleGroup))).sorted()
+        appState.remoteWorkout = WorkoutDay(
+            name: template.name,
+            exercises: exercises,
+            durationMinutes: max(30, exercises.count * 8),
+            gymType: "Gym",
+            muscleGroups: muscleGroups
+        )
     }
 
     // MARK: - Weekday Strip
@@ -434,5 +458,7 @@ struct DashboardView: View {
     state.onboardingComplete = true
     return MainTabView()
         .environment(state)
+        .environment(ProgramService())
+        .environment(StoreVM())
         .preferredColorScheme(.dark)
 }

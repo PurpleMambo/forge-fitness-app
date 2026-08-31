@@ -62,8 +62,12 @@ struct WorkoutDay: Identifiable {
 // MARK: - App State
 @Observable
 class AppState {
-    var welcomeSeen = false
-    var onboardingComplete = false
+    var welcomeSeen: Bool = UserDefaults.standard.bool(forKey: "welcomeSeen") {
+        didSet { UserDefaults.standard.set(welcomeSeen, forKey: "welcomeSeen") }
+    }
+    var onboardingComplete: Bool = UserDefaults.standard.bool(forKey: "onboardingComplete") {
+        didSet { UserDefaults.standard.set(onboardingComplete, forKey: "onboardingComplete") }
+    }
     var userInitials = "GG"
     var planName = "Get Lean"
     var selectedDate = Date()
@@ -71,6 +75,7 @@ class AppState {
     var showActiveWorkout = false
     var isAuthenticated = false
     var sessionCheckComplete = false
+    var remoteWorkout: WorkoutDay? = nil
 
     @MainActor
     func checkSession() async {
@@ -83,6 +88,7 @@ class AppState {
     }
 
     var todayWorkout: WorkoutDay? {
+        if let remote = remoteWorkout { return remote }
         let cal = Calendar.current
         let wd = cal.component(.weekday, from: selectedDate)
         let idx = wd == 1 ? 6 : wd - 2

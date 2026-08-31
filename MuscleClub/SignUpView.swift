@@ -8,8 +8,10 @@ private let googleiOSClientID = "837041480144-s8juc3a72qjc1u3te945e28kvnne5e4u.a
 
 struct SignUpView: View {
     let onComplete: () -> Void
+    var programId: UUID = UUID(uuidString: "a0000000-0000-0000-0000-000000000001")!
 
     @Environment(AppState.self) private var appState
+    @Environment(ProgramService.self) private var programService
     @State private var currentNonce = ""
     @State private var isLoading = false
     @State private var errorMessage = ""
@@ -127,6 +129,7 @@ struct SignUpView: View {
                 nonce: currentNonce
             ))
             appState.isAuthenticated = true
+            Task { try? await programService.assignProgram(programId: programId) }
             onComplete()
         } catch {
             errorMessage = error.localizedDescription
@@ -163,6 +166,7 @@ struct SignUpView: View {
                 accessToken: result.user.accessToken.tokenString
             ))
             appState.isAuthenticated = true
+            Task { try? await programService.assignProgram(programId: programId) }
             onComplete()
         } catch {
             if (error as? GIDSignInError)?.code != .canceled {
@@ -190,5 +194,6 @@ struct SignUpView: View {
 #Preview {
     SignUpView(onComplete: {})
         .environment(AppState())
+        .environment(ProgramService())
         .preferredColorScheme(.dark)
 }

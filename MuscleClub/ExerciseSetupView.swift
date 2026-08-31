@@ -169,7 +169,9 @@ struct ExerciseSetupView: View {
     var heroSection: some View {
         ZStack(alignment: .topTrailing) {
             if let resource = exercise.videoResource,
-               let url = Bundle.main.videoURL(named: resource) {
+               let url = resource.hasPrefix("https://")
+                   ? URL(string: resource)
+                   : Bundle.main.videoURL(named: resource) {
                 Button { isVideoPlaying.toggle() } label: {
                     LoopingVideoPlayer(url: url, isMuted: isMuted, isPlaying: isVideoPlaying)
                         .frame(maxWidth: .infinity)
