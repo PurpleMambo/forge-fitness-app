@@ -19,6 +19,9 @@ struct MainTabView: View {
             Tab("Log", systemImage: "calendar") {
                 PlaceholderTabView(title: "Log", icon: "calendar")
             }
+            Tab("Account", systemImage: "person.fill") {
+                AccountView()
+            }
         }
         .tint(.appAccent)
         .tabBarMinimizeBehavior(.onScrollDown)
