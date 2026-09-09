@@ -157,16 +157,51 @@ struct DashboardView: View {
         appState.workoutStore.isWorkoutCompleted(workout, on: date)
     }
 
-    // Mon-Sun tuples for current week — carries the full WorkoutDay? for completion checks
-    var weekDays: [(date: Date, letter: String, num: String, workout: WorkoutDay?)] {
-        let today = Date()
-        let wd = cal.component(.weekday, from: today)
-        let offset = wd == 1 ? -6 : -(wd - 2)
-        let monday = cal.date(byAdding: .day, value: offset, to: today)!
-        let letters = ["M","T","W","T","F","S","S"]
-        return (0..<7).map { i in
-            let d = cal.date(byAdding: .day, value: i, to: monday)!
-            return (d, letters[i], String(cal.component(.day, from: d)), WorkoutDay.weekSchedule[i])
+    // All days in the current month — drives the scrollable month strip
+    var monthDays: [(date: Date, letter: String, num: String, workout: WorkoutDay?)] {
+        let firstOfMonth = cal.date(from: cal.dateComponents([.year, .month], from: Date()))!
+        let daysInMonth  = cal.range(of: .day, in: .month, for: firstOfMonth)!.count
+        let dayLetters = ["S","M","T","W","T","F","S"] // 0=Sun … 6=Sat
+        let dayNames   = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"]
+        let workoutDayNames = Set(programService.templates.map { $0.dayOfWeek })
+        return (0..<daysInMonth).map { i in
+            let d  = cal.date(byAdding: .day, value: i, to: firstOfMonth)!
+            let wd = cal.component(.weekday, from: d) - 1 // 0=Sun … 6=Sat
+            let hasWorkout = workoutDayNames.isEmpty
+                ? false
+                : workoutDayNames.contains(dayNames[wd])
+            let workout: WorkoutDay? = hasWorkout
+                ? WorkoutDay(name: "Workout", exercises: [], durationMinutes: 60, gymType: "Gym", muscleGroups: [])
+                : nil
+            return (d, dayLetters[wd], String(cal.component(.day, from: d)), workout)
+        }
+    }
+
+    // monthDays split into Mon–Sun ISO weeks for the snapping strip
+    typealias DayItem = (date: Date, letter: String, num: String, workout: WorkoutDay?)
+    var weekGroups: [[DayItem]] {
+        var groups: [[DayItem]] = []
+        var current: [DayItem] = []
+        for item in monthDays {
+            // Start a new group on every Monday (weekday == 2), except the very first item
+            if cal.component(.weekday, from: item.date) == 2, !current.isEmpty {
+                groups.append(current)
+                current = []
+            }
+            current.append(item)
+        }
+        if !current.isEmpty { groups.append(current) }
+        return groups
+    }
+
+    private func scrollToWeek(containing date: Date, proxy: ScrollViewProxy, animated: Bool) {
+        let idx = weekGroups.firstIndex(where: { week in
+            week.contains(where: { cal.isDate($0.date, inSameDayAs: date) })
+        }) ?? 0
+        if animated {
+            withAnimation(.spring(response: 0.4)) { proxy.scrollTo(idx) }
+        } else {
+            proxy.scrollTo(idx)
         }
     }
 
@@ -263,56 +298,78 @@ struct DashboardView: View {
         )
     }
 
-    // MARK: - Weekday Strip
+    // MARK: - Month Strip (snaps week-by-week)
     var weekStrip: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            GlassEffectContainer(spacing: 8) {
-                HStack(spacing: 6) {
-                    ForEach(weekDays, id: \.date) { item in
-                        let selected = cal.isDate(item.date, inSameDayAs: appState.selectedDate)
-                        let isToday  = cal.isDateInToday(item.date)
-                        let done     = item.workout.map { isWorkoutCompleted($0, on: item.date) } ?? false
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 0) {
+                    ForEach(Array(weekGroups.enumerated()), id: \.offset) { index, week in
+                        HStack {
+                            Spacer(minLength: 0)
+                            GlassEffectContainer(spacing: 8) {
+                                HStack(spacing: 6) {
+                                    ForEach(week, id: \.date) { item in
+                                        let selected = cal.isDate(item.date, inSameDayAs: appState.selectedDate)
+                                        let isToday  = cal.isDateInToday(item.date)
+                                        let done     = item.workout.map { w in
+                                            !w.exercises.isEmpty && isWorkoutCompleted(w, on: item.date)
+                                        } ?? false
 
-                        Button {
-                            withAnimation(.spring(response: 0.4)) { appState.selectedDate = item.date }
-                        } label: {
-                            VStack(spacing: 6) {
-                                Text(item.letter)
-                                    .font(.caption).fontWeight(.medium)
-                                    .foregroundStyle(.secondary)
+                                        Button {
+                                            withAnimation(.spring(response: 0.4)) { appState.selectedDate = item.date }
+                                        } label: {
+                                            VStack(spacing: 6) {
+                                                Text(item.letter)
+                                                    .font(.caption).fontWeight(.medium)
+                                                    .foregroundStyle(.secondary)
 
-                                if selected {
-                                    Text(item.num)
-                                        .font(.system(size: 17, weight: .bold))
-                                        .foregroundColor(.white)
-                                        .frame(width: 40, height: 40)
-                                        .glassEffect(.regular.tint(.appAccent).interactive(), in: .circle)
-                                        .glassEffectID("daysel", in: dayNamespace)
-                                } else {
-                                    Text(item.num)
-                                        .font(.system(size: 17, weight: .regular))
-                                        .frame(width: 40, height: 40)
-                                        .foregroundStyle(isToday ? AnyShapeStyle(Color.appAccent) : AnyShapeStyle(Color.primary))
-                                }
+                                                if selected {
+                                                    Text(item.num)
+                                                        .font(.system(size: 17, weight: .bold))
+                                                        .foregroundColor(.white)
+                                                        .frame(width: 40, height: 40)
+                                                        .glassEffect(.regular.tint(.appAccent).interactive(), in: .circle)
+                                                        .glassEffectID("daysel", in: dayNamespace)
+                                                } else {
+                                                    Text(item.num)
+                                                        .font(.system(size: 17, weight: .regular))
+                                                        .frame(width: 40, height: 40)
+                                                        .foregroundStyle(isToday ? AnyShapeStyle(Color.appAccent) : AnyShapeStyle(Color.primary))
+                                                }
 
-                                // Bottom indicator: animated checkmark if done, dot if workout pending, invisible if rest
-                                ZStack {
-                                    if done {
-                                        AnimatedCheckmark()
-                                    } else if item.workout != nil {
-                                        Circle()
-                                            .fill(Color.appAccent)
-                                            .frame(width: 5, height: 5)
+                                                // Bottom indicator: animated checkmark if done, dot if workout pending, invisible if rest
+                                                ZStack {
+                                                    if done {
+                                                        AnimatedCheckmark()
+                                                    } else if item.workout != nil {
+                                                        Circle()
+                                                            .fill(Color.appAccent)
+                                                            .frame(width: 5, height: 5)
+                                                    }
+                                                }
+                                                .frame(width: 14, height: 10)
+                                            }
+                                            .frame(width: 50)
+                                        }
+                                        .buttonStyle(.plain)
                                     }
                                 }
-                                .frame(width: 14, height: 10)
+                                .padding(.horizontal, 18)
                             }
-                            .frame(width: 50)
+                            Spacer(minLength: 0)
                         }
-                        .buttonStyle(.plain)
+                        .containerRelativeFrame(.horizontal)
+                        .id(index)
                     }
                 }
-                .padding(.horizontal, 18)
+                .scrollTargetLayout()
+            }
+            .scrollTargetBehavior(.viewAligned)
+            .onAppear {
+                scrollToWeek(containing: appState.selectedDate, proxy: proxy, animated: false)
+            }
+            .onChange(of: appState.selectedDate) { _, newDate in
+                scrollToWeek(containing: newDate, proxy: proxy, animated: true)
             }
         }
     }
