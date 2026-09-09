@@ -5,23 +5,56 @@ import Supabase
 
 // MARK: - Colors
 extension Color {
-    static let appBg     = Color(red: 0.07, green: 0.04, blue: 0.10)
-    static let appAccent = Color(red: 0.72, green: 0.16, blue: 0.22)
-    static let appGold   = Color(red: 0.95, green: 0.76, blue: 0.28)
+    static let appBg = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.04, green: 0.04, blue: 0.05, alpha: 1)
+            : UIColor(red: 0.97, green: 0.99, blue: 0.98, alpha: 1)
+    })
+    static let appAccent = Color.mint
+    static let appGold   = Color.mint
 }
 
 // MARK: - Background gradient (gives Liquid Glass more to reflect)
 struct AppBackground: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
-        LinearGradient(
-            colors: [
-                Color(red: 0.12, green: 0.06, blue: 0.20),
-                Color(red: 0.05, green: 0.02, blue: 0.08)
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .ignoresSafeArea()
+        if colorScheme == .dark {
+            MeshGradient(width: 3, height: 3, points: [
+                .init(0, 0), .init(0.5, 0), .init(1, 0),
+                .init(0, 0.5), .init(0.5, 0.5), .init(1, 0.5),
+                .init(0, 1), .init(0.5, 1), .init(1, 1)
+            ], colors: [
+                Color(red: 0.04, green: 0.16, blue: 0.18),  // dark teal top-left
+                Color(red: 0.02, green: 0.04, blue: 0.07),  // near-black top-center
+                Color(red: 0.03, green: 0.06, blue: 0.13),  // dark navy top-right
+                Color(red: 0.05, green: 0.13, blue: 0.15),  // teal-green mid-left
+                Color(red: 0.03, green: 0.04, blue: 0.06),  // dark center
+                Color(red: 0.02, green: 0.04, blue: 0.10),  // deep navy mid-right
+                Color(red: 0.01, green: 0.03, blue: 0.04),  // near-black bottom-left
+                Color(red: 0.03, green: 0.10, blue: 0.12),  // subtle teal bottom-center
+                Color(red: 0.01, green: 0.02, blue: 0.04)   // near-black bottom-right
+            ])
+            .ignoresSafeArea()
+        } else {
+            // Light mode: rich mint + warm cream give the glass real color to refract
+            MeshGradient(width: 3, height: 3, points: [
+                .init(0, 0), .init(0.5, 0), .init(1, 0),
+                .init(0, 0.5), .init(0.5, 0.5), .init(1, 0.5),
+                .init(0, 1), .init(0.5, 1), .init(1, 1)
+            ], colors: [
+                Color(red: 0.62, green: 0.92, blue: 0.85),  // vivid mint top-left
+                Color.white,                                  // white top-center
+                Color(red: 0.78, green: 0.96, blue: 0.92),  // soft mint top-right
+                Color.white,                                  // white mid-left
+                Color(red: 0.82, green: 0.97, blue: 0.93),  // mint center
+                Color(red: 1.00, green: 0.95, blue: 0.90),  // warm cream mid-right
+                Color(red: 0.70, green: 0.94, blue: 0.88),  // mint bottom-left
+                Color(red: 1.00, green: 0.97, blue: 0.93),  // warm cream bottom-center
+                Color(red: 0.97, green: 0.94, blue: 0.89)   // warm blush bottom-right
+            ])
+            .ignoresSafeArea()
+        }
     }
 }
 

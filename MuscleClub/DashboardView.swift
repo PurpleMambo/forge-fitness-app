@@ -520,5 +520,4 @@ struct DashboardView: View {
         .environment(state)
         .environment(ProgramService())
         .environment(StoreVM())
-        .preferredColorScheme(.dark)
 }

@@ -196,14 +196,12 @@ struct ExerciseSetupView: View {
                 .buttonStyle(.plain)
             } else {
                 Rectangle()
-                    .fill(LinearGradient(
-                        colors: [Color(red: 0.15, green: 0.10, blue: 0.25), .black],
-                        startPoint: .top, endPoint: .bottom))
+                    .fill(Color.appAccent.opacity(0.08))
                     .frame(height: 240)
                     .overlay {
                         Image(systemName: exercise.sfSymbol)
                             .font(.system(size: 72))
-                            .foregroundColor(.white.opacity(0.14))
+                            .foregroundColor(.appAccent.opacity(0.25))
                     }
             }
 
@@ -656,7 +654,6 @@ struct ExerciseSetupView: View {
 
 #Preview {
     ExerciseSetupView(exercise: WorkoutDay.pushDay.exercises[0], workout: WorkoutDay.pushDay)
-        .preferredColorScheme(.dark)
 }
 
 #Preview("Active Workout") {
@@ -665,5 +662,4 @@ struct ExerciseSetupView: View {
         exercise: WorkoutDay.pushDay.exercises[2],
         workoutStore: store
     )
-    .preferredColorScheme(.dark)
 }

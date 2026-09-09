@@ -167,22 +167,20 @@ struct ExerciseDetailView: View {
                 .buttonStyle(.plain)
             } else {
                 Rectangle()
-                    .fill(LinearGradient(
-                        colors: [Color(red: 0.15, green: 0.10, blue: 0.25), .black],
-                        startPoint: .top, endPoint: .bottom))
+                    .fill(Color.appAccent.opacity(0.08))
                     .frame(height: 320)
                     .overlay {
                         VStack(spacing: 20) {
                             Image(systemName: exercise.sfSymbol)
                                 .font(.system(size: 80))
-                                .foregroundColor(.white.opacity(0.18))
+                                .foregroundColor(.appAccent.opacity(0.30))
                             ZStack {
                                 Circle()
-                                    .fill(.white.opacity(0.18))
+                                    .fill(Color.appAccent.opacity(0.15))
                                     .frame(width: 56, height: 56)
                                 Image(systemName: "play.fill")
                                     .font(.system(size: 20))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.appAccent)
                                     .offset(x: 2)
                             }
                         }
@@ -371,5 +369,4 @@ struct ExerciseDetailView: View {
     NavigationStack {
         ExerciseDetailView(exercise: WorkoutDay.pushDay.exercises[0])
     }
-    .preferredColorScheme(.dark)
 }

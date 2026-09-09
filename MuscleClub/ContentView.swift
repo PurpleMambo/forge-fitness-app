@@ -34,7 +34,6 @@ struct RootView: View {
                 NewOnboardingFlowView()
             }
         }
-        .preferredColorScheme(.dark)
         .task { await appState.checkSession() }
         .onOpenURL { url in
             GIDSignIn.sharedInstance.handle(url)
