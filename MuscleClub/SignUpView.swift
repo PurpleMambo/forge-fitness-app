@@ -12,6 +12,7 @@ struct SignUpView: View {
 
     @Environment(AppState.self) private var appState
     @Environment(ProgramService.self) private var programService
+    @Environment(\.colorScheme) private var colorScheme
     @State private var currentNonce = ""
     @State private var isLoading = false
     @State private var errorMessage = ""
@@ -25,18 +26,18 @@ struct SignUpView: View {
 
                 Image(systemName: "figure.strengthtraining.traditional")
                     .font(.system(size: 72, weight: .light))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                     .padding(.bottom, 36)
 
                 VStack(spacing: 12) {
                     Text("Save your results")
                         .font(.system(size: 34, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                         .multilineTextAlignment(.center)
 
                     Text("Create a free account to keep your personalised plan and track your progress over time.")
                         .font(.body)
-                        .foregroundStyle(.white.opacity(0.85))
+                        .foregroundStyle(.primary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 8)
                 }
@@ -61,7 +62,7 @@ struct SignUpView: View {
                     } onCompletion: { result in
                         Task { await handleAppleCompletion(result) }
                     }
-                    .signInWithAppleButtonStyle(.white)
+                    .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
                     .frame(height: 54)
                     .clipShape(.capsule)
                     .disabled(isLoading)
@@ -86,14 +87,13 @@ struct SignUpView: View {
                         .padding(.vertical, 6)
                     }
                     .buttonStyle(.glassProminent)
-                    .tint(.white)
-                    .foregroundStyle(Color.appAccent)
+                    .tint(.appAccent)
                     .controlSize(.extraLarge)
                     .disabled(isLoading)
 
                     Button("Not now") { onComplete() }
                         .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.55))
+                        .foregroundStyle(.secondary)
                         .padding(.top, 6)
                         .disabled(isLoading)
                 }

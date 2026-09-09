@@ -41,13 +41,13 @@ struct NewOnboardingFlow_FeatureShowcaseScreen: View {
                     VStack(spacing: 4) {
                         Text(model.firstName.isEmpty ? "Train like a pro." : "\(model.firstName), train like a pro.")
                             .font(.system(size: 36, weight: .bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                     }
                     .multilineTextAlignment(.center)
 
                     Text("Understand your progress, follow your plan, and get insights built for your training.")
                         .font(.title3)
-                        .foregroundStyle(.white.opacity(0.85))
+                        .foregroundStyle(.primary)
                         .multilineTextAlignment(.center)
 
                     // Feature cards — horizontal scroll
@@ -66,7 +66,7 @@ struct NewOnboardingFlow_FeatureShowcaseScreen: View {
                     // Disclaimer
                     Text("Results vary. Your plan is personalised based on the information you provided.")
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.4))
+                        .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 12)
                         .padding(.bottom, 8)
@@ -96,7 +96,7 @@ struct NewOnboardingFlow_FeatureShowcaseScreen: View {
         VStack(alignment: .leading, spacing: 12) {
             Image(systemName: feature.icon)
                 .font(.title2)
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
                 .frame(width: 44, height: 44)
                 .glassEffect(.regular.tint(feature.tint.opacity(0.4)), in: .rect(cornerRadius: 12))
 

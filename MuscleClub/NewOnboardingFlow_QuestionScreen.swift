@@ -63,20 +63,20 @@ struct NewOnboardingFlow_QuestionScreen: View {
                     // Icon
                     Image(systemName: step.icon)
                         .font(.title)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                         .frame(width: 56, height: 56)
                         .glassEffect(.regular.tint(.appAccent.opacity(0.35)), in: .circle)
 
                     // Title
                     Text(step.title)
                         .font(.system(size: 28, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                         .fixedSize(horizontal: false, vertical: true)
 
                     // Subtitle
                     Text(step.subtitle)
                         .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.65))
+                        .foregroundStyle(.secondary)
                         .padding(.bottom, 4)
 
                     // Input — options, text field, or native pickers
@@ -155,7 +155,7 @@ struct NewOnboardingFlow_QuestionScreen: View {
 
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
-                    Capsule().fill(.white.opacity(0.10)).frame(height: 4)
+                    Capsule().fill(.primary.opacity(0.10)).frame(height: 4)
                     Capsule().fill(Color.appAccent)
                         .frame(width: geo.size.width * model.questionnaireProgress, height: 4)
                         .animation(.spring(response: 0.5), value: model.questionnaireProgress)
@@ -165,7 +165,7 @@ struct NewOnboardingFlow_QuestionScreen: View {
 
             Text("\(stepIndex + 1)/\(newOnboardingSteps.count)")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.45))
+                .foregroundStyle(.secondary)
                 .monospacedDigit()
         }
     }
@@ -180,11 +180,11 @@ struct NewOnboardingFlow_QuestionScreen: View {
             HStack(spacing: 14) {
                 Text(opt)
                     .font(.body.weight(.medium))
-                    .foregroundStyle(isSelected ? .white : .primary)
+                    .foregroundStyle(.primary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
-                    .foregroundStyle(isSelected ? .white : .secondary)
+                    .foregroundStyle(isSelected ? Color.appAccent : .secondary)
             }
             .padding(16)
         }

@@ -64,12 +64,12 @@ struct NewOnboardingFlow_CommitStepView: View {
                     VStack(spacing: 12) {
                         Text("I commit to")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.6))
+                            .foregroundStyle(.primary.opacity(0.6))
 
                         VStack(spacing: 10) {
                             Text("building my")
                                 .font(.system(size: 28, weight: .bold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.primary)
                             Text("strongest self")
                                 .font(.system(size: 28, weight: .heavy))
                                 .foregroundStyle(.white)
@@ -79,7 +79,7 @@ struct NewOnboardingFlow_CommitStepView: View {
                                 )
                             Text("starting today")
                                 .font(.system(size: 28, weight: .bold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.primary)
                         }
                         .multilineTextAlignment(.center)
                     }
@@ -88,7 +88,7 @@ struct NewOnboardingFlow_CommitStepView: View {
                     // Animated figure
                     Image(systemName: "figure.strengthtraining.traditional")
                         .font(.system(size: 80, weight: .light))
-                        .foregroundStyle(.white.opacity(0.85))
+                        .foregroundStyle(.primary)
                         .scaleEffect(figureScale)
                         .animation(.easeInOut(duration: 0.12), value: figureScale)
                 }
@@ -99,7 +99,7 @@ struct NewOnboardingFlow_CommitStepView: View {
                 VStack(spacing: 20) {
                     Text(isHolding ? "Charging up…" : "Press and hold to commit")
                         .font(.system(size: 17, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
 
                     holdButton
                 }
@@ -116,11 +116,11 @@ struct NewOnboardingFlow_CommitStepView: View {
             // Decorative sparkles
             Image(systemName: "sparkle")
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.65))
+                .foregroundStyle(.primary.opacity(0.35))
                 .offset(x: -76, y: 8)
             Image(systemName: "sparkle")
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.45))
+                .foregroundStyle(.primary.opacity(0.25))
                 .offset(x: 18, y: -68)
 
             Circle()
@@ -129,14 +129,14 @@ struct NewOnboardingFlow_CommitStepView: View {
 
             Circle()
                 .trim(from: 0, to: holdProgress)
-                .stroke(.white, style: StrokeStyle(lineWidth: 4.5, lineCap: .round))
+                .stroke(Color.appAccent, style: StrokeStyle(lineWidth: 4.5, lineCap: .round))
                 .frame(width: 74, height: 74)
                 .rotationEffect(.degrees(-90))
                 .animation(.linear(duration: 0.05), value: holdProgress)
 
             Image(systemName: "touchid")
                 .font(.system(size: 46, weight: .medium))
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
                 .scaleEffect(isHolding ? 0.88 : 1.0)
                 .animation(.easeInOut(duration: 0.12), value: isHolding)
         }

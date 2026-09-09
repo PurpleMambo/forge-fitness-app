@@ -45,7 +45,7 @@ struct NewOnboardingFlow_GoalSpeedScreen: View {
                     VStack(alignment: .leading, spacing: 0) {
                         Text("How fast do you want to reach your goal?")
                             .font(.system(size: 32, weight: .bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                             .padding(.horizontal, 24)
                             .padding(.top, 8)
                             .opacity(appeared ? 1 : 0)
@@ -53,7 +53,7 @@ struct NewOnboardingFlow_GoalSpeedScreen: View {
 
                         Text("Pick a pace that suits your lifestyle.")
                             .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.65))
+                            .foregroundStyle(.secondary)
                             .padding(.horizontal, 24)
                             .padding(.top, 8)
                             .opacity(appeared ? 1 : 0)
@@ -140,11 +140,11 @@ struct NewOnboardingFlow_GoalSpeedScreen: View {
                     .foregroundStyle(Color.appAccent)
                 Text(selectedSpeed.rawValue)
                     .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
             }
             Text(selectedSpeed.description)
                 .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.75))
+                .foregroundStyle(.secondary)
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -220,7 +220,7 @@ private struct SpeedIconButton: View {
 
                 Text(label)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(isSelected ? .white : .white.opacity(0.5))
+                    .foregroundStyle(isSelected ? .primary : .secondary)
                     .lineLimit(1)
             }
             .animation(.snappy(duration: 0.2), value: isSelected)

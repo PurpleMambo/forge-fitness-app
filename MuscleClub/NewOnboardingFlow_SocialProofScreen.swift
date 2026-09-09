@@ -24,10 +24,10 @@ struct NewOnboardingFlow_SocialProofScreen: View {
                     VStack(spacing: 6) {
                         Text("Members just like you")
                             .font(.system(size: 32, weight: .bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                         Text("are getting stronger.")
                             .font(.system(size: 32, weight: .bold))
-                            .foregroundStyle(.white.opacity(0.8))
+                            .foregroundStyle(.primary)
                     }
                     .multilineTextAlignment(.center)
                     .opacity(appeared ? 1 : 0)
@@ -41,7 +41,7 @@ struct NewOnboardingFlow_SocialProofScreen: View {
                     HStack(alignment: .center, spacing: 10) {
                         Image(systemName: "laurel.leading")
                             .font(.system(size: 80, weight: .light))
-                            .foregroundStyle(.white.opacity(0.6))
+                            .foregroundStyle(.secondary)
 
                         VStack(spacing: 10) {
                             HStack(spacing: 3) {
@@ -65,7 +65,7 @@ struct NewOnboardingFlow_SocialProofScreen: View {
 
                         Image(systemName: "laurel.trailing")
                             .font(.system(size: 80, weight: .light))
-                            .foregroundStyle(.white.opacity(0.6))
+                            .foregroundStyle(.secondary)
                     }
                     .opacity(appeared ? 1 : 0)
                     .offset(y: appeared ? 0 : 20)
@@ -118,7 +118,7 @@ struct NewOnboardingFlow_SocialProofScreen: View {
                             .frame(width: 28, height: 28)
                         Text(r.initial)
                             .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                     }
                     Text(r.author)
                         .font(.caption)

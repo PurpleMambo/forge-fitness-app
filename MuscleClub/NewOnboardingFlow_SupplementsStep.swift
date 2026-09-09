@@ -50,7 +50,7 @@ struct NewOnboardingFlow_SupplementsStep: View {
                         VStack(spacing: 6) {
                             Text("Supplements")
                                 .font(.system(size: 38, weight: .bold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.primary)
                             Text("& nutrition.")
                                 .font(.system(size: 38, weight: .bold))
                                 .foregroundStyle(Color.appGold)
@@ -62,7 +62,7 @@ struct NewOnboardingFlow_SupplementsStep: View {
                         Text("Have you ever used supplements? We'll tailor your recovery and nutrition guidance.")
                             .font(.subheadline)
                             .multilineTextAlignment(.center)
-                            .foregroundStyle(.white.opacity(0.75))
+                            .foregroundStyle(.secondary)
                             .padding(.top, 10)
                             .padding(.horizontal, 32)
                             .opacity(appeared ? 1 : 0)
@@ -103,20 +103,20 @@ struct NewOnboardingFlow_SupplementsStep: View {
             HStack(spacing: 14) {
                 Image(systemName: opt.icon)
                     .font(.body)
-                    .foregroundStyle(isSelected ? Color.appGold : .white.opacity(0.7))
+                    .foregroundStyle(isSelected ? Color.appGold : .primary)
                     .frame(width: 26)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(opt.label)
                         .font(.body.weight(.semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                     Text(opt.sub)
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.55))
+                        .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
-                    .foregroundStyle(isSelected ? Color.appGold : .white.opacity(0.4))
+                    .foregroundStyle(isSelected ? Color.appGold : .secondary)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 14)
@@ -161,7 +161,7 @@ struct NewOnboardingFlow_SupplementsStep: View {
                     model.supplementsPick("")
                 }
                 .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.5))
+                .foregroundStyle(.secondary)
                 .padding(.bottom, 32)
             }
             .background(Color.appBg)

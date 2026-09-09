@@ -24,7 +24,7 @@ struct NewOnboardingFlow_CalculatingScreen: View {
             VStack(spacing: 6) {
                 Text("Building your")
                     .font(.system(size: 34, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Text("custom plan…")
                     .font(.system(size: 34, weight: .bold))
                     .foregroundStyle(Color.appAccent)
@@ -36,7 +36,7 @@ struct NewOnboardingFlow_CalculatingScreen: View {
             // Circular progress
             ZStack {
                 Circle()
-                    .stroke(.white.opacity(0.12), lineWidth: 5)
+                    .stroke(.primary.opacity(0.12), lineWidth: 5)
                 Circle()
                     .trim(from: 0, to: progress)
                     .stroke(Color.appAccent, style: StrokeStyle(lineWidth: 5, lineCap: .round))
@@ -44,14 +44,14 @@ struct NewOnboardingFlow_CalculatingScreen: View {
                     .animation(.linear(duration: 0.05), value: progress)
                 Text("\(Int(progress * 100))%")
                     .font(.title2.weight(.bold).monospacedDigit())
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                     .contentTransition(.numericText())
             }
             .frame(width: 88, height: 88)
 
             Text(statusText)
                 .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.7))
+                .foregroundStyle(.secondary)
                 .padding(.top, 14)
                 .animation(.easeInOut(duration: 0.3), value: statusText)
 

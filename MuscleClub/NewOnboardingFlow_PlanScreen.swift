@@ -11,7 +11,7 @@ struct NewOnboardingFlow_PlanScreen: View {
                     HStack {
                         Text("MUSCLE CLUB")
                             .font(.system(size: 18, weight: .black)).tracking(5)
-                            .foregroundStyle(.white.opacity(0.08))
+                            .foregroundStyle(.primary.opacity(0.06))
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.horizontal, 24).padding(.top, 16).padding(.bottom, 32)
@@ -25,7 +25,7 @@ struct NewOnboardingFlow_PlanScreen: View {
 
                         Text(planTitle)
                             .font(.system(size: 38, weight: .heavy))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
 
                         Text("A plan built for consistent progress with automatic progression and recovery-aware training.")
                             .font(.system(size: 15))
