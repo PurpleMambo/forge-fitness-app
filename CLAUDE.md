@@ -8,7 +8,7 @@ Use the Xcode MCP tools — not the command line — for all build and run opera
 
 - **Build**: `BuildProject`
 - **Run**: `RunProject`
-- **Check for compiler errors quickly**: `XcodeRefreshCodeIssuesInFile` (fast, no full build needed)
+- **Quick compiler check**: `XcodeRefreshCodeIssuesInFile` (fast, no full build needed)
 - **Run a snippet**: `RunCodeSnippet`
 
 There are no tests yet.
@@ -17,26 +17,52 @@ There are no tests yet.
 
 ### App entry & global state
 
-`ContentView.swift` is the entry point (`@main MyApp`). It creates a single `AppState` and `StoreVM` instance, both injected via `.environment()`. `RootView` has a three-state gate:
+`ContentView.swift` is the entry point (`@main MyApp`). It creates three root-level singletons injected via `.environment()`: `AppState`, `StoreVM`, and `ProgramService`.
 
-1. `!appState.welcomeSeen` → `WelcomeView`
-2. `!appState.onboardingComplete` → `NewOnboardingFlowView`
-3. otherwise → `MainTabView`
+`RootView` has a four-state gate:
 
-`AppState` (in `Models.swift`) is an `@Observable` class — the only shared mutable state. Key fields:
-- `welcomeSeen`, `onboardingComplete` — navigation gates
-- `userInitials`, `planName`, `selectedDate` — user context
-- `showActiveWorkout: Bool` — drives the full-screen workout cover from `MainTabView`
-- `workoutStore: WorkoutStore` — the persistence layer
-- `todayWorkout: WorkoutDay?` — computed from `selectedDate` weekday → `WorkoutDay.weekSchedule`
+1. `!appState.sessionCheckComplete` → blank `AppBackground()` (splash while checking Supabase session)
+2. `!appState.welcomeSeen` → `WelcomeView`
+3. `appState.onboardingComplete` → `MainTabView` (also triggers `programService.loadAll()`)
+4. otherwise → `NewOnboardingFlowView`
 
-### Data model
+`AppState` (`Models.swift`) is an `@Observable` class — the only shared mutable state. Key fields:
+- `welcomeSeen`, `onboardingComplete` — persisted to `UserDefaults` via `didSet`; `checkSession()` sets both to `true` when a valid Supabase session exists
+- `isAuthenticated`, `sessionCheckComplete` — set by `checkSession()` on every cold launch
+- `selectedDate` — drives the week strip and which workout is shown
+- `showActiveWorkout: Bool` — triggers the `.fullScreenCover` for the active workout from `MainTabView`
+- `remoteWorkout: WorkoutDay?` — set by `DashboardView.loadTodayExercises()`; takes priority in `todayWorkout`
+- `todayWorkout: WorkoutDay?` — computed: returns `remoteWorkout` if set, otherwise falls back to hardcoded `WorkoutDay.weekSchedule`
+- `workoutStore: WorkoutStore` — persists `[LoggedSetEntry]` to `UserDefaults` (key `workout_logged_sets_v1`)
 
-`Exercise` and `WorkoutDay` are plain structs. All workout data is hardcoded as static properties on `WorkoutDay` (`pushDay`, `pullDay`, `legDay`, `weekSchedule`). `WorkoutStore` persists `[LoggedSetEntry]` to `UserDefaults` (key `workout_logged_sets_v1`). There is no networking layer.
+### Supabase / live data (`ProgramService.swift`)
+
+`ProgramService` is an `@Observable @MainActor` class injected at the root. It owns:
+- `userProgram: RemoteUserProgram?` — the user's enrolled program and current week
+- `templates: [RemoteWorkoutTemplate]` — all workout templates for that program
+- `exerciseCache: [UUID: [RemoteWorkoutExercise]]` — in-memory cache keyed by template ID
+
+**Bootstrap:** `loadAll()` is called from `ContentView` when `MainTabView` appears. It fetches programs, user program, and templates in parallel.
+
+**Dashboard data flow:**
+1. `DashboardView.loadTodayExercises()` calls `programService.todayTemplate(for: selectedDate)` to get today's template
+2. Then `programService.exercises(for: template.id)` to get exercises (cached)
+3. Maps `RemoteWorkoutExercise → Exercise` via `RemoteWorkoutExercise.toExercise()` in `RemoteModels.swift`
+4. Sets `appState.remoteWorkout` so `todayWorkout` picks it up
+
+`DashboardView` re-runs this whenever `selectedDate` or `programService.userProgram?.id` changes.
+
+### Remote models (`RemoteModels.swift`)
+
+Codable structs that mirror the Supabase schema. Key types:
+- `RemoteWorkoutTemplate` — a single day's workout within a week (`dayOfWeek`, `weekNumber`)
+- `RemoteWorkoutExercise` — join table row; embeds `RemoteExercise` via `select("*, exercise:exercises(*)")`
+- `RemoteExercise.videoUrl` — HTTPS URL to Supabase Storage; nil if no video uploaded yet
+- `RemoteWorkoutExercise.toExercise()` — only converts rows where `exerciseType == "exercise"` (skips warmups/cardio/cooldowns)
 
 ### Onboarding flow (`NewOnboardingFlowView.swift`)
 
-`NewOnboardingFlowView` is the active onboarding. It owns a `NewOnboardingFlowViewModel` (`@Observable`) which drives all navigation via a `Phase` enum:
+`NewOnboardingFlowViewModel` (`@Observable`) drives all navigation via a `Phase` enum:
 
 ```
 .questions(Int) → .goalSpeed → .sleep → .supplements
@@ -44,75 +70,95 @@ There are no tests yet.
 → .signUp → .featureShowcase → .commit
 ```
 
-The 25-step questionnaire is defined in `newOnboardingSteps: [NewOnboardingStep]` (keyed by stable `id: Int`). The VM skips the World Class location step (id 13) when a different gym is chosen, and inserts `.goalSpeed`, `.sleep`, and `.supplements` custom screens at fixed branch points. `isGoingBack` flips the slide transition direction. `NewOnboardingFlow_CommitStepView` closes onboarding by setting `appState.onboardingComplete = true`.
+- 26-step questionnaire defined in `newOnboardingSteps: [NewOnboardingStep]` (keyed by stable `id: Int`)
+- Skips the World Class location step (id 13) when a different gym is chosen
+- Inserts `.goalSpeed`, `.sleep`, `.supplements` custom screens at fixed branch points
+- `isGoingBack` flips the slide transition direction
+- `vm.selectedProgramId` computes the correct program UUID from the gender answer (step id 25) and is passed directly to `SignUpView(programId:)`
+- `NewOnboardingFlow_CommitStepView` closes onboarding by setting `appState.onboardingComplete = true`
 
-`OnboardingView.swift` is an older chat-bubble onboarding — it is **no longer used** (replaced by `NewOnboardingFlowView`).
+`OnboardingView.swift` is an older chat-bubble onboarding — **no longer used**.
+
+### Auth (`SignUpView.swift`)
+
+Apple Sign In and Google Sign In (native SDK, no browser popup) both flow into `supabase.auth.signInWithIdToken`. After success:
+1. `appState.isAuthenticated = true`
+2. `programService.assignProgram(programId:)` is called (upserts a `user_programs` row)
+3. `onComplete()` advances the onboarding phase
+
+`SignUpView` takes a `programId: UUID` parameter — wired from the onboarding VM's gender answer:
+- Male: `a0000000-0000-0000-0000-000000000001`
+- Female: `a0000000-0000-0000-0000-000000000002`
 
 ### Main app flow (`DashboardView.swift`)
 
-`MainTabView` has four tabs; only "Workout" (`DashboardView`) is implemented. The others are `PlaceholderTabView`. The active workout is launched via `appState.showActiveWorkout = true`, which triggers a `.fullScreenCover` at the `MainTabView` level — this means the workout can be dismissed by setting `appState.showActiveWorkout = false` from anywhere.
+`MainTabView` has four tabs; only "Workout" (`DashboardView`) is implemented. The others are `PlaceholderTabView`.
 
-`MainTabView` also hosts a `WorkoutAccessoryView` in `.tabViewBottomAccessory` (the music-player mini-bar pattern): it collapses to an inline bar when the user scrolls down.
+`MainTabView` hosts a `WorkoutAccessoryView` in `.tabViewBottomAccessory` (music-player mini-bar pattern) that collapses inline when scrolling.
 
-`DashboardView` workout card flow:
-
+Dashboard exercise tap flow:
 1. Tap exercise row → sets `setupExercise`, shows `ExerciseSetupView` as a sheet
-2. In `ExerciseSetupView`, tap "How-To" → `ExerciseDetailView` sheet (video instructions)
-3. Tap "Start Workout" from dashboard → dismisses setup sheet, waits 350ms, sets `appState.showActiveWorkout = true`
+2. In `ExerciseSetupView`, tap "How-To" → `ExerciseDetailView` sheet (video + instructions)
+3. Tap "Start Workout" → dismisses setup sheet, waits 350ms, sets `appState.showActiveWorkout = true`
+
+The week strip uses hardcoded `WorkoutDay.weekSchedule` for the workout-day dots (not live data).
 
 ### Active workout flow (`WorkoutExecutionView.swift`)
 
-`ActiveWorkoutView` is a full-screen cover. Key interactions:
+`ActiveWorkoutView` is a full-screen cover presented from `MainTabView`. Key interactions:
+- `xmark` button and floating stop button (red circle) both set `showFinishSheet = true`
+- `WorkoutFinishOverlay` slides up: backdrop/X resumes; "Log Workout" → sets `showSummary = true`
+- `WorkoutSummaryView` is a `.fullScreenCover` inside `ActiveWorkoutView`; its `onDone` dismisses the whole cover
 
-- Top-left `xmark` button and floating stop button (red circle at bottom) both set `showFinishSheet = true`
-- `WorkoutFinishOverlay` slides up: tapping the backdrop or X resumes; tapping "Log Workout" cancels the timer, sets `showSummary = true`
-- `WorkoutSummaryView` is a `.fullScreenCover` presented from within `ActiveWorkoutView`; its `onDone` calls `isPresented = false` which closes the whole active workout cover
+### ExerciseSetupView dual modes
 
-### ExerciseSetupView dual modes (`ExerciseSetupView.swift`)
-
-`ExerciseSetupView` serves two contexts controlled by which optional params are provided:
-
-- **Setup mode** (`onStartWorkout` provided, `workoutStore` nil): shows warmup + working sets grid, "Start Workout" CTA
-- **Active mode** (`workoutStore` provided): shows per-set logging with editable reps/weight fields, rest timer overlay, "Log Set" / "Log All Sets" CTA
+Controlled by which optional params are provided:
+- **Setup mode** (`onStartWorkout` provided): warmup + working sets grid, "Start Workout" CTA
+- **Active mode** (`workoutStore` provided): per-set logging, reps/weight fields, rest timer overlay, "Log Set" / "Log All Sets" CTA
 
 ### Video playback (`ExerciseDetailView.swift`)
 
-`LoopingVideoPlayer` is a `UIViewRepresentable` wrapping `AVPlayer` with `AVPlayerLayer`. It loops via `AVPlayerItemDidPlayToEndTime` notification.
+`LoopingVideoPlayer` is a `UIViewRepresentable` wrapping `AVPlayer`. It loops via `AVPlayerItemDidPlayToEndTime`.
 
-`Bundle.videoURL(named:)` is a custom helper that handles Unicode NFC/NFD filename normalization — needed because the bundled `.mov` files have Icelandic names. Always use this helper instead of `Bundle.main.url(forResource:withExtension:)` when loading video.
+`Exercise.videoResource` holds either:
+- A **local filename** (without extension) for bundled `.mov` files — load with `Bundle.videoURL(named:)` which handles Unicode NFC/NFD normalization for Icelandic filenames
+- An **HTTPS URL string** for Supabase Storage videos — detected by the `https://` prefix
+
+Always use `Bundle.videoURL(named:)` for local files, never `Bundle.main.url(forResource:withExtension:)`.
 
 ### In-app purchases (`StoreVM.swift` / `PaywallView.swift`)
 
-`StoreVM` is an `@Observable @MainActor` class injected at the root alongside `AppState`. It manages two auto-renewable subscriptions:
+`StoreVM` is an `@Observable @MainActor` class. Two auto-renewable subscriptions:
 
 | Product ID | Plan |
 |---|---|
 | `themuscleclub.subscription.yearly` | Annual |
 | `themuscleclub.subscription.weekly` | Weekly |
 
-Key state: `hasActiveSubscription: Bool`, `hasLoadedEntitlements: Bool`, `isLoading: Bool`. A background `Task` listens to `StoreKit.Transaction.updates` for the lifetime of the app.
-
-`MuscleClubPaywallView` reads `StoreVM` from the environment and calls `storeVM.purchase(_:)`. Completion is detected two ways — the `purchase()` return value and an `onChange(of: storeVM.hasActiveSubscription)` observer — guarded by a `didComplete` flag to prevent double-firing.
+A background `Task` listens to `StoreKit.Transaction.updates` for the app's lifetime. `MuscleClubPaywallView` calls `storeVM.purchase(_:)`; completion is guarded by a `didComplete` flag to prevent double-firing from both the return value and `onChange(of: storeVM.hasActiveSubscription)`.
 
 ### Design system
 
-This is an iOS 26 app built entirely around **Liquid Glass**. Key patterns used throughout:
+iOS 26 app built entirely around **Liquid Glass**. Key patterns:
 
-- `.glassEffect()` / `.glassEffect(.regular.tint(.appAccent))` — on containers and cards
+- `.glassEffect()` / `.glassEffect(.regular.tint(.appAccent))` — containers and cards
 - `.buttonStyle(.glass)` / `.buttonStyle(.glassProminent)` — standard button styles
-- `GlassEffectContainer(spacing:)` — required wrapper for morph/matchedGeometry effects between sibling glass elements
-- `.glassEffectID(_:in:)` with a `@Namespace` — for the animated selected-day pill in the week strip
+- `GlassEffectContainer(spacing:)` — required wrapper for morph/matchedGeometry between sibling glass elements
+- `.glassEffectID(_:in:)` with a `@Namespace` — animated selected-day pill in the week strip
+- `AppBackground` — reusable gradient view; use as the base `ZStack` layer in every screen
 
-The app is dark-only (`.preferredColorScheme(.dark)` set at the root).
+The app is dark-only (`.preferredColorScheme(.dark)` at root).
 
 ### Colors (`Models.swift`)
 
-Three app-wide colors defined as `Color` extensions:
+| Name | Value | Usage |
+|---|---|---|
+| `appAccent` | Crimson red | Primary interactive tint |
+| `appGold` | Golden yellow | Section headers, focus labels |
+| `appBg` | Dark purple-black | Background reference (use `AppBackground` instead) |
 
-| Name | Usage |
-|---|---|
-| `appBg` | Dark purple-black background |
-| `appAccent` | Crimson red — primary interactive tint |
-| `appGold` | Golden yellow — section headers, focus labels |
+### Supabase project
 
-`AppBackground` is a reusable `View` that applies the standard gradient; use it as the base `ZStack` layer in every screen.
+- URL: `https://neomyrexkfgrsrcqvnsb.supabase.co`
+- Client singleton: `supabase` in `SupabaseClient.swift`
+- Storage bucket: `exercise-videos` — HTTPS URLs stored in `exercises.video_url`
