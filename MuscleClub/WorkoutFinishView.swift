@@ -49,7 +49,7 @@ struct WorkoutFinishOverlay: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             // Dimming backdrop — tapping it resumes the workout
-            Color.black.opacity(0.6)
+            Color.black.opacity(0.5)
                 .ignoresSafeArea()
                 .onTapGesture { onResume() }
 
@@ -70,70 +70,57 @@ struct WorkoutFinishOverlay: View {
 
             // Summary panel
             VStack(spacing: 0) {
-                // Handle
+                // Drag handle
                 Capsule()
-                    .fill(.white.opacity(0.18))
+                    .fill(.white.opacity(0.3))
                     .frame(width: 38, height: 4)
                     .padding(.top, 12)
 
-                VStack(spacing: 0) {
-                    // Title row
-                    HStack(alignment: .center) {
-                        Text("Finish and log your workout?")
-                            .font(.system(size: 19, weight: .bold))
-                        Spacer()
-                        Button {} label: {
-                            Image(systemName: "questionmark.circle")
-                                .font(.system(size: 18))
-                                .foregroundStyle(.secondary)
+                VStack(spacing: 20) {
+                    // Title
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Great work!")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(.appAccent)
+                            Text("Log your workout?")
+                                .font(.system(size: 22, weight: .bold))
                         }
-                        .buttonStyle(.plain)
+                        Spacer()
                     }
-                    .padding(.top, 20)
 
-                    // Stats bar
-                    HStack(spacing: 0) {
-                        statColumn(label: "DURATION",  value: durationString)
-                        statDivider()
-                        statColumn(label: "EXERCISES", value: "\(exercisesLogged)")
-                        statDivider()
-                        statColumn(label: "VOLUME",    value: volumeString)
-                        statDivider()
-                        statColumn(label: "CALORIES",  value: "\(caloriesEstimate) kcal")
+                    // Stats row — four glass chips
+                    HStack(spacing: 8) {
+                        statChip(label: "DURATION",  value: durationString,             icon: "timer")
+                        statChip(label: "EXERCISES", value: "\(exercisesLogged)",        icon: "dumbbell.fill")
+                        statChip(label: "VOLUME",    value: volumeString,                icon: "scalemass.fill")
+                        statChip(label: "CALORIES",  value: "\(caloriesEstimate) kcal",  icon: "flame.fill")
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 20)
-
-                    // Divider
-                    Rectangle()
-                        .fill(.white.opacity(0.08))
-                        .frame(height: 1)
-                        .padding(.top, 20)
 
                     // Integration toggles
                     VStack(spacing: 0) {
                         toggleRow(
                             icon: "heart.fill",
                             color: Color(red: 0.90, green: 0.20, blue: 0.35),
-                            label: "Sync to Apple Health",
+                            label: "Apple Health",
                             value: $syncAppleHealth
                         )
-                        Rectangle().fill(.white.opacity(0.08)).frame(height: 1).padding(.leading, 38)
+                        Rectangle().fill(.white.opacity(0.08)).frame(height: 1).padding(.leading, 54)
                         toggleRow(
                             icon: "bolt.fill",
                             color: Color(red: 0.98, green: 0.42, blue: 0.08),
-                            label: "Post to Strava",
+                            label: "Strava",
                             value: $postStrava
                         )
-                        Rectangle().fill(.white.opacity(0.08)).frame(height: 1).padding(.leading, 38)
+                        Rectangle().fill(.white.opacity(0.08)).frame(height: 1).padding(.leading, 54)
                         toggleRow(
                             icon: "circle.grid.3x3.fill",
                             color: Color(red: 0.0, green: 0.60, blue: 0.85),
-                            label: "Post to Fitbit",
+                            label: "Fitbit",
                             value: $postFitbit
                         )
                     }
-                    .padding(.top, 4)
+                    .glassEffect(.regular, in: .rect(cornerRadius: 18))
 
                     // Action buttons
                     HStack(spacing: 12) {
@@ -149,44 +136,47 @@ struct WorkoutFinishOverlay: View {
                         .tint(.appAccent)
                         .frame(maxWidth: .infinity)
                     }
-                    .padding(.top, 24)
                     .padding(.bottom, 36)
                 }
                 .padding(.horizontal, 20)
+                .padding(.top, 20)
             }
-            .background(Color(red: 0.08, green: 0.05, blue: 0.12))
-            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .glassEffect(.regular, in: .rect(cornerRadius: 28))
+            .padding(.horizontal, 8)
         }
     }
 
     // MARK: - Sub-views
 
-    func statColumn(label: String, value: String) -> some View {
-        VStack(spacing: 5) {
-            Text(label)
-                .font(.system(size: 9, weight: .heavy))
-                .foregroundStyle(.secondary)
-                .tracking(0.8)
+    func statChip(label: String, value: String, icon: String) -> some View {
+        VStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 15))
+                .foregroundStyle(.appAccent)
             Text(value)
-                .font(.system(size: 14, weight: .bold))
-                .minimumScaleFactor(0.7)
+                .font(.system(size: 12, weight: .bold))
+                .minimumScaleFactor(0.6)
                 .lineLimit(1)
+            Text(label)
+                .font(.system(size: 8, weight: .heavy))
+                .foregroundStyle(.secondary)
+                .tracking(0.4)
         }
         .frame(maxWidth: .infinity)
-    }
-
-    func statDivider() -> some View {
-        Rectangle()
-            .fill(.white.opacity(0.12))
-            .frame(width: 1, height: 34)
+        .padding(.vertical, 12)
+        .glassEffect(.regular, in: .rect(cornerRadius: 14))
     }
 
     func toggleRow(icon: String, color: Color, label: String, value: Binding<Bool>) -> some View {
-        HStack(spacing: 14) {
-            Image(systemName: icon)
-                .font(.system(size: 14))
-                .foregroundColor(color)
-                .frame(width: 24, alignment: .center)
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(color.opacity(0.2))
+                    .frame(width: 32, height: 32)
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(color)
+            }
             Text(label)
                 .font(.system(size: 15))
             Spacer()
@@ -194,7 +184,8 @@ struct WorkoutFinishOverlay: View {
                 .labelsHidden()
                 .tint(.appAccent)
         }
-        .padding(.vertical, 14)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 }
 
