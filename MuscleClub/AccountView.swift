@@ -16,80 +16,78 @@ struct AccountView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                AppBackground()
+        ZStack {
+            AppBackground()
 
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 28) {
-                        // Avatar + name + email
-                        VStack(spacing: 14) {
-                            ZStack {
-                                Circle()
-                                    .fill(Color.appAccent)
-                                    .frame(width: 80, height: 80)
-                                Text(initials.isEmpty ? "?" : initials)
-                                    .font(.system(size: 30, weight: .bold))
-                                    .foregroundColor(.white)
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 28) {
+                    // Avatar + name + email
+                    VStack(spacing: 14) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.appAccent)
+                                .frame(width: 80, height: 80)
+                            Text(initials.isEmpty ? "?" : initials)
+                                .font(.system(size: 30, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+
+                        VStack(spacing: 4) {
+                            if !userName.isEmpty {
+                                Text(userName)
+                                    .font(.system(size: 22, weight: .bold))
                             }
-
-                            VStack(spacing: 4) {
-                                if !userName.isEmpty {
-                                    Text(userName)
-                                        .font(.system(size: 22, weight: .bold))
-                                }
-                                if !userEmail.isEmpty {
-                                    Text(userEmail)
-                                        .font(.system(size: 15))
-                                        .foregroundStyle(.secondary)
-                                }
+                            if !userEmail.isEmpty {
+                                Text(userEmail)
+                                    .font(.system(size: 15))
+                                    .foregroundStyle(.secondary)
                             }
                         }
-                        .padding(.top, 32)
-
-                        // Actions
-                        VStack(spacing: 12) {
-                            Button {
-                                showLogoutAlert = true
-                            } label: {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "arrow.right.square")
-                                        .font(.system(size: 18))
-                                    Text("Log Out")
-                                        .font(.system(size: 16, weight: .semibold))
-                                    Spacer()
-                                }
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 16)
-                            }
-                            .buttonStyle(.glass)
-
-                            Button {
-                                showDeleteAlert = true
-                            } label: {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "trash")
-                                        .font(.system(size: 18))
-                                    Text("Delete Account")
-                                        .font(.system(size: 16, weight: .semibold))
-                                    Spacer()
-                                }
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 16)
-                            }
-                            .buttonStyle(.glass)
-                            .tint(.red)
-                            .foregroundStyle(.red)
-                        }
-                        .padding(.horizontal, 18)
-
-                        Spacer(minLength: 80)
                     }
+                    .padding(.top, 32)
+
+                    // Actions
+                    VStack(spacing: 12) {
+                        Button {
+                            showLogoutAlert = true
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "arrow.right.square")
+                                    .font(.system(size: 18))
+                                Text("Log Out")
+                                    .font(.system(size: 16, weight: .semibold))
+                                Spacer()
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 16)
+                        }
+                        .buttonStyle(.glass)
+
+                        Button {
+                            showDeleteAlert = true
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "trash")
+                                    .font(.system(size: 18))
+                                Text("Delete Account")
+                                    .font(.system(size: 16, weight: .semibold))
+                                Spacer()
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 16)
+                        }
+                        .buttonStyle(.glass)
+                        .tint(.red)
+                        .foregroundStyle(.red)
+                    }
+                    .padding(.horizontal, 18)
+
+                    Spacer(minLength: 80)
                 }
             }
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationTitle("Account")
         }
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle("Account")
         .task { await loadUser() }
         .alert("Log Out", isPresented: $showLogoutAlert) {
             Button("Log Out", role: .destructive) { Task { await logOut() } }

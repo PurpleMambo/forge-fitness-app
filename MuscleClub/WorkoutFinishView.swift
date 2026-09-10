@@ -12,6 +12,18 @@ struct WorkoutFinishOverlay: View {
 
     @State private var syncAppleHealth = false
 
+    // TODO: Apple Health integration
+    // When syncAppleHealth is true and the user taps "Log Workout", save a strength training
+    // workout to HealthKit with duration + estimated active calories.
+    // Steps needed:
+    //   1. Add NSHealthUpdateUsageDescription to Info.plist
+    //   2. Add com.apple.developer.healthkit entitlement to MuscleClub.entitlements
+    //   3. Link HealthKit.framework to the target
+    //   4. Request HKHealthStore authorization (write: HKWorkoutType, activeEnergyBurned)
+    //   5. In onFinish: build HKWorkout(activityType: .traditionalStrengthTraining,
+    //         start:, end:, duration: elapsedSeconds, totalEnergyBurned: caloriesEstimate kcal)
+    //      and save via HKHealthStore().save(_:withCompletion:)
+
     // MARK: - Computed stats
 
     var durationString: String {

@@ -1,4 +1,5 @@
 import SwiftUI
+import Supabase
 
 // MARK: - Main Tab View (native iOS 26 — Liquid Glass tab bar is automatic)
 struct MainTabView: View {
@@ -18,9 +19,6 @@ struct MainTabView: View {
             }
             Tab("Log", systemImage: "calendar") {
                 PlaceholderTabView(title: "Log", icon: "calendar")
-            }
-            Tab("Account", systemImage: "person.fill") {
-                AccountView()
             }
         }
         .tint(.appAccent)
@@ -144,8 +142,23 @@ struct DashboardView: View {
     private let cal = Calendar.current
     @State private var setupExercise: Exercise? = nil
     @State private var showSwitchSheet = false
+    @State private var showAccount = false
+    @State private var toolbarUserName: String = ""
 
     private static let completedGreen = Color(red: 0.3, green: 0.85, blue: 0.45)
+
+    private var toolbarInitials: String {
+        let parts = toolbarUserName.split(separator: " ").prefix(2)
+        return parts.compactMap { $0.first.map { String($0) } }.joined().uppercased()
+    }
+
+    private var planName: String {
+        guard let up = programService.userProgram,
+              let prog = programService.programs.first(where: { $0.id == up.programId }) else {
+            return "My Plan"
+        }
+        return prog.name
+    }
 
     // MARK: - Completion helpers
     private func isExerciseCompleted(_ ex: Exercise) -> Bool {
@@ -232,20 +245,21 @@ struct DashboardView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(isPresented: $showAccount) { AccountView() }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button {  } label: {
+                    Button { showAccount = true } label: {
                         HStack(spacing: 8) {
                             ZStack {
                                 Circle()
                                     .fill(Color.appAccent)
                                     .frame(width: 30, height: 30)
-                                Text("GG")
+                                Text(toolbarInitials.isEmpty ? "?" : toolbarInitials)
                                     .font(.system(size: 12, weight: .bold))
                                     .foregroundColor(.white)
                             }
                             HStack(spacing: 3) {
-                                Text("My Plan")
+                                Text(planName)
                                     .font(.system(size: 16, weight: .semibold))
                                     .foregroundStyle(.primary)
                                 Image(systemName: "chevron.right")
@@ -280,8 +294,18 @@ struct DashboardView: View {
                 .presentationBackground(Color(red: 0.08, green: 0.05, blue: 0.12))
         }
         .task { await loadTodayExercises() }
+        .task { await loadToolbarUser() }
         .onChange(of: appState.selectedDate) { Task { await loadTodayExercises() } }
         .onChange(of: programService.userProgram?.id) { Task { await loadTodayExercises() } }
+    }
+
+    private func loadToolbarUser() async {
+        guard let user = try? await supabase.auth.session.user else { return }
+        if case .string(let name) = user.userMetadata["full_name"] {
+            toolbarUserName = name
+        } else if case .string(let name) = user.userMetadata["name"] {
+            toolbarUserName = name
+        }
     }
 
     private func loadTodayExercises() async {
