@@ -11,8 +11,6 @@ struct WorkoutFinishOverlay: View {
     var onDiscard: () -> Void = {}
 
     @State private var syncAppleHealth = false
-    @State private var postStrava      = false
-    @State private var postFitbit      = false
 
     // MARK: - Computed stats
 
@@ -82,7 +80,7 @@ struct WorkoutFinishOverlay: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Great work!")
                                 .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(.appAccent)
+                                .foregroundStyle(Color.appAccent)
                             Text("Log your workout?")
                                 .font(.system(size: 22, weight: .bold))
                         }
@@ -99,26 +97,20 @@ struct WorkoutFinishOverlay: View {
 
                     // Integration toggles
                     VStack(spacing: 0) {
-                        toggleRow(
-                            icon: "heart.fill",
-                            color: Color(red: 0.90, green: 0.20, blue: 0.35),
-                            label: "Apple Health",
-                            value: $syncAppleHealth
-                        )
-                        Rectangle().fill(.white.opacity(0.08)).frame(height: 1).padding(.leading, 54)
-                        toggleRow(
-                            icon: "bolt.fill",
-                            color: Color(red: 0.98, green: 0.42, blue: 0.08),
-                            label: "Strava",
-                            value: $postStrava
-                        )
-                        Rectangle().fill(.white.opacity(0.08)).frame(height: 1).padding(.leading, 54)
-                        toggleRow(
-                            icon: "circle.grid.3x3.fill",
-                            color: Color(red: 0.0, green: 0.60, blue: 0.85),
-                            label: "Fitbit",
-                            value: $postFitbit
-                        )
+                        toggleRow(label: "Apple Health", value: $syncAppleHealth) {
+                            Image("Health icon")
+                                .resizable()
+                                .scaledToFit()
+                                .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                        }
+                        // TODO: Instagram Story share — wire up when ready
+//                        Rectangle().fill(.white.opacity(0.08)).frame(height: 1).padding(.leading, 60)
+//                        shareRow(label: "Instagram Story") {
+//                            Image("IG_logo")
+//                                .resizable()
+//                                .scaledToFit()
+//                                .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+//                        }
                     }
                     .glassEffect(.regular, in: .rect(cornerRadius: 18))
 
@@ -136,12 +128,19 @@ struct WorkoutFinishOverlay: View {
                         .tint(.appAccent)
                         .frame(maxWidth: .infinity)
                     }
-                    .padding(.bottom, 36)
+                    .padding(.bottom, 44)
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
             }
-            .glassEffect(.regular, in: .rect(cornerRadius: 28))
+            .glassEffect(.regular, in: UnevenRoundedRectangle(
+                topLeadingRadius: 28,
+                bottomLeadingRadius: 0,
+                bottomTrailingRadius: 0,
+                topTrailingRadius: 28,
+                style: .continuous
+            ))
+            .ignoresSafeArea(.container, edges: .bottom)
             .padding(.horizontal, 8)
         }
     }
@@ -152,7 +151,7 @@ struct WorkoutFinishOverlay: View {
         VStack(spacing: 6) {
             Image(systemName: icon)
                 .font(.system(size: 15))
-                .foregroundStyle(.appAccent)
+                .foregroundStyle(Color.appAccent)
             Text(value)
                 .font(.system(size: 12, weight: .bold))
                 .minimumScaleFactor(0.6)
@@ -167,16 +166,10 @@ struct WorkoutFinishOverlay: View {
         .glassEffect(.regular, in: .rect(cornerRadius: 14))
     }
 
-    func toggleRow(icon: String, color: Color, label: String, value: Binding<Bool>) -> some View {
+    func toggleRow<Icon: View>(label: String, value: Binding<Bool>, @ViewBuilder icon: () -> Icon) -> some View {
         HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(color.opacity(0.2))
-                    .frame(width: 32, height: 32)
-                Image(systemName: icon)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(color)
-            }
+            icon()
+                .frame(width: 32, height: 32)
             Text(label)
                 .font(.system(size: 15))
             Spacer()
@@ -186,6 +179,42 @@ struct WorkoutFinishOverlay: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
+    }
+
+    func shareRow<Icon: View>(label: String, @ViewBuilder icon: () -> Icon) -> some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            shareToInstagram()
+        } label: {
+            HStack(spacing: 12) {
+                ZStack(alignment: .bottomTrailing) {
+                    icon()
+                        .frame(width: 32, height: 32)
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(.white, Color.appAccent)
+                        .offset(x: 4, y: 4)
+                }
+                Text(label)
+                    .font(.system(size: 15))
+                    .foregroundStyle(.primary)
+                Spacer()
+                Image(systemName: "square.and.arrow.up")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func shareToInstagram() {
+        guard let url = URL(string: "instagram-stories://share") else { return }
+        if UIApplication.shared.canOpenURL(url) {
+            UIApplication.shared.open(url)
+        }
     }
 }
 
