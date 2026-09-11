@@ -16,7 +16,7 @@ struct MainTabView: View {
                 PlaceholderTabView(title: "Body", icon: "figure.arms.open")
             }
             Tab("Targets", systemImage: "scope") {
-                PlaceholderTabView(title: "Targets", icon: "scope")
+                TargetView()
             }
             Tab("Log", systemImage: "calendar") {
                 PlaceholderTabView(title: "Log", icon: "calendar")

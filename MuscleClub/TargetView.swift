@@ -54,7 +54,7 @@ struct TargetView: View {
                         // ── Timeline label ────────────────────────────────────
                         Text("Road to Your Goal")
                             .font(.system(size: 17, weight: .bold))
-                            .foregroundStyle(.appAccent)
+                            .foregroundStyle(Color.appAccent)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 24)
                             .padding(.bottom, 22)
@@ -76,8 +76,6 @@ struct TargetView: View {
 
                         // ── Final destination card ────────────────────────────
                         finalGoalSection
-                            .padding(.horizontal, 20)
-                            .padding(.top, 20)
                             .scrollTransition { content, phase in
                                 content
                                     .scaleEffect(1.0 - abs(phase.value) * 0.08)
@@ -125,7 +123,7 @@ struct TargetView: View {
 
                 Text("16-Week Strength Program")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.appAccent)
+                    .foregroundStyle(Color.appAccent)
 
                 Text("Week 6 of 16  ·  Tap ring to replay")
                     .font(.system(size: 11))
@@ -223,26 +221,27 @@ struct TargetView: View {
     // MARK: - Final Goal card
 
     private var finalGoalSection: some View {
+        // Same outer structure as milestoneRow so the dashed line connects flush
         HStack(alignment: .top, spacing: 0) {
-            // Terminal node (flag, no connector below)
+            // Locked flag node — no connector below
             ZStack {
                 Circle()
-                    .fill(Color.appAccent)
-                    .frame(width: 36, height: 36)
-                    .overlay(Circle().stroke(Color.appAccent.opacity(0.35), lineWidth: 2.5))
+                    .fill(Color.primary.opacity(0.07))
+                    .frame(width: 32, height: 32)
+                    .overlay(Circle().stroke(Color.primary.opacity(0.13), lineWidth: 1.5))
                 Image(systemName: "flag.checkered")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(.black)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary.opacity(0.45))
             }
             .frame(width: 56, height: 48)
             .padding(.leading, 20)
 
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Text("FINAL GOAL")
                         .font(.system(size: 10, weight: .black))
                         .tracking(1.2)
-                        .foregroundStyle(.appAccent)
+                        .foregroundStyle(.secondary)
                     Spacer()
                     Text("Month 6")
                         .font(.system(size: 12, weight: .medium))
@@ -250,13 +249,13 @@ struct TargetView: View {
                 }
 
                 Text("New Body.\nNew Strength.")
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(.primary)
+                    .font(.system(size: 21, weight: .bold))
+                    .foregroundStyle(.secondary)
                     .lineSpacing(2)
 
-                Text("Finish the full 16-week program and unlock your peak physique. Every rep gets you closer.")
+                Text("Finish the full 16-week program and unlock your peak physique.")
                     .font(.system(size: 13))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.secondary.opacity(0.55))
                     .lineSpacing(3)
 
                 HStack(spacing: 14) {
@@ -264,26 +263,21 @@ struct TargetView: View {
                     Label("16 Weeks",    systemImage: "calendar")
                 }
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.appAccent.opacity(0.8))
+                .foregroundStyle(.secondary.opacity(0.45))
             }
-            .padding(16)
+            .padding(14)
             .background(
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.appAccent.opacity(0.07))
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(Color.primary.opacity(0.03))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(
-                                LinearGradient(
-                                    colors: [.appAccent.opacity(0.55), .appAccent.opacity(0.12)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 1.2
-                            )
+                        RoundedRectangle(cornerRadius: 18)
+                            .stroke(Color.primary.opacity(0.08),
+                                    style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
                     )
             )
             .padding(.leading, 8)
             .padding(.trailing, 20)
+            .padding(.bottom, 14)
         }
     }
 
