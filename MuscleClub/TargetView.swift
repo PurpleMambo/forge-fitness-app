@@ -15,27 +15,85 @@ private struct GoalMilestone: Identifiable {
     let detail: String
 }
 
+// Static milestone definitions — status is computed from live data
+private struct MilestoneDef {
+    let id: Int
+    let title: String
+    let subtitle: String
+    let icon: String
+    let detail: String
+    let workoutThreshold: Int  // # workouts needed to mark completed
+}
+
+private let milestoneDefs: [MilestoneDef] = [
+    .init(id: 1,  title: "First Steps",         subtitle: "Weeks 1–2",   icon: "figure.walk",                         detail: "Log your first 6 workouts",             workoutThreshold: 6),
+    .init(id: 2,  title: "Build the Habit",     subtitle: "Weeks 3–4",   icon: "flame.fill",                          detail: "Reach a 2-week workout streak",          workoutThreshold: 12),
+    .init(id: 3,  title: "Stay Consistent",     subtitle: "Weeks 5–8",   icon: "bolt.fill",                           detail: "Complete 12 workouts this month",        workoutThreshold: 18),
+    .init(id: 4,  title: "Find Your Strength",  subtitle: "Month 3",     icon: "dumbbell.fill",                       detail: "Increase weight on every lift",          workoutThreshold: 22),
+    .init(id: 5,  title: "Unlock Volume",       subtitle: "Month 3–4",   icon: "arrow.up.circle.fill",                detail: "3 sets × 10 reps across the board",     workoutThreshold: 26),
+    .init(id: 6,  title: "Nutrition Lock-In",   subtitle: "Month 4",     icon: "fork.knife",                          detail: "Track meals for 30 straight days",       workoutThreshold: 30),
+    .init(id: 7,  title: "Push the Limit",      subtitle: "Month 4–5",   icon: "chart.line.uptrend.xyaxis",           detail: "Add 5 kg to your baseline lifts",        workoutThreshold: 33),
+    .init(id: 8,  title: "Strength Summit",     subtitle: "Month 5",     icon: "trophy.fill",                         detail: "New 1-rep max on the big 3",             workoutThreshold: 36),
+    .init(id: 9,  title: "Final Sprint",        subtitle: "Month 5–6",   icon: "hare.fill",                           detail: "12 workouts in the last 6 weeks",        workoutThreshold: 38),
+    .init(id: 10, title: "Body Transformation", subtitle: "Month 6",     icon: "figure.strengthtraining.traditional", detail: "Complete all 40 program workouts",       workoutThreshold: 40),
+]
+
 // MARK: - Target View
 
 struct TargetView: View {
+    @Environment(AppState.self)      private var appState
+    @Environment(StreakService.self) private var streakService
+    @Environment(ProgramService.self) private var programService
+
     @State private var animatedProgress: Double = 0
     @State private var pulseScale: CGFloat = 1.0
     @State private var pulseOpacity: Double = 0.4
 
-    private let overallProgress: Double = 0.38
+    // MARK: - Derived live values
 
-    private let milestones: [GoalMilestone] = [
-        .init(id: 1,  title: "First Steps",         subtitle: "Weeks 1–2",   icon: "figure.walk",                          status: .completed, detail: "Log your first 6 workouts"),
-        .init(id: 2,  title: "Build the Habit",     subtitle: "Weeks 3–4",   icon: "flame.fill",                           status: .completed, detail: "Reach a 2-week workout streak"),
-        .init(id: 3,  title: "Stay Consistent",     subtitle: "Weeks 5–8",   icon: "bolt.fill",                            status: .current,   detail: "Complete 12 workouts this month"),
-        .init(id: 4,  title: "Find Your Strength",  subtitle: "Month 3",     icon: "dumbbell.fill",                        status: .upcoming,  detail: "Increase weight on every lift"),
-        .init(id: 5,  title: "Unlock Volume",       subtitle: "Month 3–4",   icon: "arrow.up.circle.fill",                 status: .upcoming,  detail: "3 sets × 10 reps across the board"),
-        .init(id: 6,  title: "Nutrition Lock-In",   subtitle: "Month 4",     icon: "fork.knife",                           status: .upcoming,  detail: "Track meals for 30 straight days"),
-        .init(id: 7,  title: "Push the Limit",      subtitle: "Month 4–5",   icon: "chart.line.uptrend.xyaxis",            status: .upcoming,  detail: "Add 5 kg to your baseline lifts"),
-        .init(id: 8,  title: "Strength Summit",     subtitle: "Month 5",     icon: "trophy.fill",                          status: .upcoming,  detail: "New 1-rep max on the big 3"),
-        .init(id: 9,  title: "Final Sprint",        subtitle: "Month 5–6",   icon: "hare.fill",                            status: .upcoming,  detail: "12 workouts in the last 6 weeks"),
-        .init(id: 10, title: "Body Transformation", subtitle: "Month 6",     icon: "figure.strengthtraining.traditional",  status: .upcoming,  detail: "Complete all 40 program workouts"),
-    ]
+    private var workoutCount: Int  { streakService.totalWorkouts }
+    private var currentStreak: Int { streakService.currentStreak }
+    private var currentWeek: Int   { programService.userProgram?.currentWeek ?? 1 }
+    private var totalWeeks: Int    { programService.templates.map(\.weekNumber).max() ?? 16 }
+    private var overallProgress: Double { min(Double(currentWeek - 1) / Double(totalWeeks), 1.0) }
+
+    private var programName: String {
+        guard let up = programService.userProgram,
+              let prog = programService.programs.first(where: { $0.id == up.programId })
+        else { return "Build Muscle" }
+        return prog.name
+    }
+
+    private var xpString: String {
+        let xp = workoutCount * 100
+        return xp >= 1000
+            ? String(format: "%.1fk", Double(xp) / 1000)
+            : "\(xp)"
+    }
+
+    private var weekSubtitle: String { "Week \(currentWeek) of \(totalWeeks)" }
+
+    // The first milestone not yet met becomes .current; everything before → .completed, after → .upcoming
+    private var milestones: [GoalMilestone] {
+        var foundCurrent = false
+        return milestoneDefs.map { def in
+            let status: MilestoneStatus
+            if workoutCount >= def.workoutThreshold {
+                status = .completed
+            } else if !foundCurrent {
+                foundCurrent = true
+                status = .current
+            } else {
+                status = .upcoming
+            }
+            return GoalMilestone(
+                id: def.id, title: def.title, subtitle: def.subtitle,
+                icon: def.icon, status: status, detail: def.detail
+            )
+        }
+    }
+
+    // MARK: - Body
 
     var body: some View {
         NavigationStack {
@@ -45,13 +103,11 @@ struct TargetView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
 
-                        // ── Hero (no container – floats on gradient) ──────────
                         heroSection
                             .padding(.horizontal, 28)
                             .padding(.top, 12)
                             .padding(.bottom, 44)
 
-                        // ── Timeline label ────────────────────────────────────
                         Text("Road to Your Goal")
                             .font(.system(size: 17, weight: .bold))
                             .foregroundStyle(Color.appAccent)
@@ -59,22 +115,16 @@ struct TargetView: View {
                             .padding(.horizontal, 24)
                             .padding(.bottom, 22)
 
-                        // ── Milestones with scroll carousel effect ────────────
                         ForEach(Array(milestones.enumerated()), id: \.element.id) { idx, milestone in
                             milestoneRow(milestone: milestone, isLast: idx == milestones.count - 1)
-                                // Vertical carousel: shrinks + fades as it scrolls off-center
                                 .scrollTransition { content, phase in
                                     content
-                                        .scaleEffect(
-                                            1.0 - abs(phase.value) * 0.11,
-                                            anchor: .leading
-                                        )
+                                        .scaleEffect(1.0 - abs(phase.value) * 0.11, anchor: .leading)
                                         .opacity(1.0 - abs(phase.value) * 0.52)
                                         .blur(radius: abs(phase.value) * 1.5)
                                 }
                         }
 
-                        // ── Final destination card ────────────────────────────
                         finalGoalSection
                             .scrollTransition { content, phase in
                                 content
@@ -89,35 +139,31 @@ struct TargetView: View {
             .navigationTitle("Target")
             .navigationBarTitleDisplayMode(.large)
         }
+        .task { await streakService.loadStreak() }
+        .onChange(of: overallProgress) { _, new in
+            withAnimation(.easeOut(duration: 1.0)) { animatedProgress = new }
+        }
     }
 
-    // MARK: - Hero Section (bare, no glass container)
+    // MARK: - Hero Section
 
     private var heroSection: some View {
         VStack(spacing: 22) {
 
-            // Tappable progress ring
             ringView
                 .onTapGesture {
                     Task {
-                        withAnimation(.easeIn(duration: 0.22)) {
-                            animatedProgress = 0
-                        }
+                        withAnimation(.easeIn(duration: 0.22)) { animatedProgress = 0 }
                         try? await Task.sleep(for: .milliseconds(260))
-                        withAnimation(.easeOut(duration: 1.45)) {
-                            animatedProgress = overallProgress
-                        }
+                        withAnimation(.easeOut(duration: 1.45)) { animatedProgress = overallProgress }
                     }
                 }
                 .onAppear {
-                    withAnimation(.easeOut(duration: 1.4)) {
-                        animatedProgress = overallProgress
-                    }
+                    withAnimation(.easeOut(duration: 1.4)) { animatedProgress = overallProgress }
                 }
 
-            // Goal title & subtitle
             VStack(spacing: 5) {
-                Text("Build Muscle")
+                Text(programName)
                     .font(.system(size: 26, weight: .bold))
                     .foregroundStyle(.primary)
 
@@ -125,46 +171,42 @@ struct TargetView: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color.appAccent)
 
-                Text("Week 6 of 16  ·  Tap ring to replay")
+                Text("\(weekSubtitle)  ·  Tap ring to replay")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
 
-            // Inline progress bar
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule().fill(Color.primary.opacity(0.10)).frame(height: 5)
-                    Capsule().fill(Color.appAccent).frame(width: geo.size.width * overallProgress, height: 5)
+                    Capsule().fill(Color.appAccent)
+                        .frame(width: geo.size.width * overallProgress, height: 5)
                 }
             }
             .frame(height: 5)
 
-            // Stats strip (bare)
             HStack(spacing: 0) {
-                statItem(value: "18",   label: "Workouts")
-                statItem(value: "6",    label: "Day Streak")
-                statItem(value: "1.2k", label: "XP Earned")
+                statItem(value: "\(workoutCount)", label: "Workouts")
+                statItem(value: "\(currentStreak)", label: "Day Streak")
+                statItem(value: xpString,           label: "XP Earned")
             }
         }
         .frame(maxWidth: .infinity)
     }
 
-    // The ring lives in its own view so `.id()` forcing is isolated to just the ring
     private var ringView: some View {
         ZStack {
-            // Track
             Circle()
                 .stroke(Color.appAccent.opacity(0.16), lineWidth: 11)
                 .frame(width: 120, height: 120)
 
-            // Progress arc
             Circle()
                 .trim(from: 0, to: animatedProgress)
                 .stroke(
                     AngularGradient(
                         gradient: Gradient(stops: [
-                            .init(color: .appAccent.opacity(0.35), location: 0),
-                            .init(color: .appAccent,                location: 1),
+                            .init(color: .appAccent.opacity(0.4), location: 0),
+                            .init(color: .appAccent,               location: 1),
                         ]),
                         center: .center
                     ),
@@ -173,7 +215,6 @@ struct TargetView: View {
                 .frame(width: 120, height: 120)
                 .rotationEffect(.degrees(-90))
 
-            // Center label
             VStack(spacing: 2) {
                 Text("\(Int(overallProgress * 100))%")
                     .font(.system(size: 28, weight: .bold, design: .rounded))
@@ -197,20 +238,17 @@ struct TargetView: View {
         .frame(maxWidth: .infinity)
     }
 
-    // MARK: - Milestone row (node + card side by side)
+    // MARK: - Milestone row
 
     private func milestoneRow(milestone: GoalMilestone, isLast: Bool) -> some View {
         HStack(alignment: .top, spacing: 0) {
-            // Left column: node + dashed line below
             VStack(spacing: 0) {
                 nodeView(for: milestone)
-                // always draw the connector, even on last item (leads down to final goal)
                 dashedConnector(completed: milestone.status == .completed)
             }
             .frame(width: 56)
             .padding(.leading, 20)
 
-            // Right: card
             milestoneCard(milestone)
                 .padding(.leading, 8)
                 .padding(.trailing, 20)
@@ -221,9 +259,7 @@ struct TargetView: View {
     // MARK: - Final Goal card
 
     private var finalGoalSection: some View {
-        // Same outer structure as milestoneRow so the dashed line connects flush
         HStack(alignment: .top, spacing: 0) {
-            // Locked flag node — no connector below
             ZStack {
                 Circle()
                     .fill(Color.primary.opacity(0.07))
@@ -253,14 +289,14 @@ struct TargetView: View {
                     .foregroundStyle(.secondary)
                     .lineSpacing(2)
 
-                Text("Finish the full 16-week program and unlock your peak physique.")
+                Text("Finish the full \(totalWeeks)-week program and unlock your peak physique.")
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary.opacity(0.55))
                     .lineSpacing(3)
 
                 HStack(spacing: 14) {
                     Label("40 Workouts", systemImage: "dumbbell.fill")
-                    Label("16 Weeks",    systemImage: "calendar")
+                    Label("\(totalWeeks) Weeks",    systemImage: "calendar")
                 }
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(.secondary.opacity(0.45))
@@ -281,7 +317,7 @@ struct TargetView: View {
         }
     }
 
-    // MARK: - Timeline node
+    // MARK: - Timeline components
 
     @ViewBuilder
     private func nodeView(for milestone: GoalMilestone) -> some View {
@@ -296,14 +332,13 @@ struct TargetView: View {
                     .foregroundStyle(.black)
 
             case .current:
-                // Pulsing ring
                 Circle()
                     .stroke(Color.appAccent.opacity(pulseOpacity), lineWidth: 3)
                     .frame(width: 46, height: 46)
                     .scaleEffect(pulseScale)
                     .onAppear {
                         withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
-                            pulseScale  = 1.24
+                            pulseScale   = 1.24
                             pulseOpacity = 0.07
                         }
                     }
@@ -315,7 +350,6 @@ struct TargetView: View {
                     .foregroundStyle(.black)
 
             case .upcoming:
-                // Locked node
                 Circle()
                     .fill(Color.primary.opacity(0.07))
                     .frame(width: 32, height: 32)
@@ -342,17 +376,12 @@ struct TargetView: View {
         .frame(width: 56, height: 66)
     }
 
-    // MARK: - Milestone card
-
     private func milestoneCard(_ milestone: GoalMilestone) -> some View {
         HStack(spacing: 12) {
-
-            // Icon badge – locked ones get a small lock overlay
             ZStack(alignment: .bottomTrailing) {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(iconBg(for: milestone))
                     .frame(width: 44, height: 44)
-
                 Image(systemName: milestone.icon)
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(iconFg(for: milestone))
@@ -371,12 +400,13 @@ struct TargetView: View {
                 }
             }
 
-            // Text stack
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 7) {
                     Text(milestone.title)
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(milestone.status == .upcoming ? AnyShapeStyle(.secondary) : AnyShapeStyle(.primary))
+                        .foregroundStyle(milestone.status == .upcoming
+                            ? AnyShapeStyle(.secondary)
+                            : AnyShapeStyle(.primary))
 
                     if milestone.status == .current {
                         Text("NOW")
@@ -394,7 +424,7 @@ struct TargetView: View {
                 Text(milestone.subtitle)
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(milestone.status == .upcoming
-                        ? AnyShapeStyle(Color.appAccent.opacity(0.38))
+                        ? AnyShapeStyle(Color.appAccent.opacity(0.32))
                         : AnyShapeStyle(Color.appAccent.opacity(0.82)))
 
                 Text(milestone.detail)
@@ -422,12 +452,12 @@ struct TargetView: View {
                 .fill(Color.primary.opacity(0.05))
                 .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.primary.opacity(0.09), lineWidth: 1))
         case .upcoming:
-            // Locked: dashed border gives a "not yet accessible" feel
             RoundedRectangle(cornerRadius: 18)
                 .fill(Color.primary.opacity(0.03))
                 .overlay(
                     RoundedRectangle(cornerRadius: 18)
-                        .stroke(Color.primary.opacity(0.08), style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
+                        .stroke(Color.primary.opacity(0.08),
+                                style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
                 )
         }
     }
@@ -453,4 +483,6 @@ struct TargetView: View {
 #Preview {
     TargetView()
         .environment(AppState())
+        .environment(ProgramService())
+        .environment(StreakService(previewStreak: 6))
 }
