@@ -10,6 +10,7 @@ struct LoginView: View {
     let onComplete: () -> Void
 
     @Environment(AppState.self) private var appState
+    @Environment(ProgramService.self) private var programService
     @Environment(\.colorScheme) private var colorScheme
     @State private var currentNonce = ""
     @State private var isLoading = false
@@ -24,7 +25,7 @@ struct LoginView: View {
 
                 Image(systemName: "bolt.fill")
                     .font(.system(size: 72, weight: .light))
-                    .foregroundStyle(.appAccent)
+                    .foregroundColor(.appAccent)
                     .padding(.bottom, 36)
 
                 VStack(spacing: 12) {
@@ -119,10 +120,7 @@ struct LoginView: View {
                 idToken: idToken,
                 nonce: currentNonce
             ))
-            appState.isAuthenticated = true
-            appState.welcomeSeen = true
-            appState.onboardingComplete = true
-            onComplete()
+            await finishLogin()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -157,15 +155,28 @@ struct LoginView: View {
                 idToken: idToken,
                 accessToken: result.user.accessToken.tokenString
             ))
-            appState.isAuthenticated = true
-            appState.welcomeSeen = true
-            appState.onboardingComplete = true
-            onComplete()
+            await finishLogin()
         } catch {
             if (error as? GIDSignInError)?.code != .canceled {
                 errorMessage = error.localizedDescription
             }
         }
+    }
+
+    // MARK: - Post-auth routing
+
+    @MainActor
+    private func finishLogin() async {
+        appState.isAuthenticated = true
+        appState.welcomeSeen = true
+        // Load programs to check if this is a real returning user.
+        // If they accidentally hit "sign in" without an account, Supabase creates
+        // one but no program row exists yet — route them through onboarding instead.
+        await programService.loadAll()
+        if programService.userProgram != nil {
+            appState.onboardingComplete = true
+        }
+        onComplete()
     }
 
     // MARK: - Nonce helpers
@@ -187,5 +198,6 @@ struct LoginView: View {
 #Preview {
     LoginView(onComplete: {})
         .environment(AppState())
+        .environment(ProgramService())
         .preferredColorScheme(.dark)
 }

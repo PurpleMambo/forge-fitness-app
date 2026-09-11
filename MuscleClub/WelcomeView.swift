@@ -2,6 +2,7 @@ import SwiftUI
 
 struct WelcomeView: View {
     @Environment(AppState.self) var appState
+    @Environment(ProgramService.self) var programService
     @State private var showLogin = false
 
     var body: some View {
@@ -51,6 +52,7 @@ struct WelcomeView: View {
         .sheet(isPresented: $showLogin) {
             LoginView(onComplete: { showLogin = false })
                 .environment(appState)
+                .environment(programService)
         }
     }
 }
@@ -58,5 +60,6 @@ struct WelcomeView: View {
 #Preview {
     WelcomeView()
         .environment(AppState())
+        .environment(ProgramService())
         .preferredColorScheme(.dark)
 }
