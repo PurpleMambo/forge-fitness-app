@@ -2,6 +2,7 @@ import SwiftUI
 
 struct WelcomeView: View {
     @Environment(AppState.self) var appState
+    @State private var showLogin = false
 
     var body: some View {
         ZStack {
@@ -37,11 +38,8 @@ struct WelcomeView: View {
                     .frame(maxWidth: .infinity)
                     .font(.system(size: 17, weight: .bold))
 
-                    Button("Already have an account...") {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            appState.welcomeSeen = true
-                            appState.onboardingComplete = true
-                        }
+                    Button("Already have an account?") {
+                        showLogin = true
                     }
                     .font(.system(size: 14))
                     .foregroundStyle(.secondary)
@@ -49,6 +47,10 @@ struct WelcomeView: View {
                 .padding(.horizontal, 28)
                 .padding(.bottom, 56)
             }
+        }
+        .sheet(isPresented: $showLogin) {
+            LoginView(onComplete: { showLogin = false })
+                .environment(appState)
         }
     }
 }
