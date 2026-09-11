@@ -1,5 +1,6 @@
 import SwiftUI
 import AVFoundation
+import Supabase
 
 // MARK: - Explore Tab (Reels-style vertical video feed for exercises)
 
@@ -11,24 +12,53 @@ struct ExploreView: View {
     @State private var detailExercise: Exercise?
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.black.ignoresSafeArea()
+        ZStack {
+            Color.black.ignoresSafeArea()
 
-                if isLoading && exercises.isEmpty {
-                    loadingView
-                } else if exercises.isEmpty {
-                    emptyView
-                } else {
-                    feedScrollView
-                }
+            if isLoading && exercises.isEmpty {
+                loadingView
+            } else if exercises.isEmpty {
+                emptyView
+            } else {
+                feedScrollView
             }
-            .sheet(item: $detailExercise) { ex in
-                NavigationStack { ExerciseDetailView(exercise: ex) }
-                    .presentationDragIndicator(.visible)
-            }
-            .task { await loadExercises() }
         }
+        .overlay(alignment: .top) {
+            exploreHeader
+        }
+        .sheet(item: $detailExercise) { ex in
+            NavigationStack { ExerciseDetailView(exercise: ex) }
+                .presentationDragIndicator(.visible)
+        }
+        .task { await loadExercises() }
+    }
+
+    // MARK: - Floating header
+
+    private var exploreHeader: some View {
+        HStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Explore")
+                    .font(.system(size: 26, weight: .heavy))
+                    .foregroundStyle(.white)
+                Text("Technique Library")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.65))
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 60)
+        .padding(.bottom, 18)
+        .background {
+            LinearGradient(
+                colors: [.black.opacity(0.55), .clear],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea(edges: .top)
+        }
+        .allowsHitTesting(false)
     }
 
     // MARK: - Feed
@@ -141,31 +171,55 @@ private struct ExploreReelCard: View {
     let onInfo: () -> Void
 
     @State private var isMuted = true
+    @State private var isPaused = false
+
+    private var effectivelyPlaying: Bool { isPlaying && !isPaused }
 
     var body: some View {
-        VStack(spacing: 0) {
-            Spacer(minLength: 0)
-            HStack(alignment: .bottom, spacing: 12) {
-                exerciseInfo
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                actionRail
-                    .frame(width: 54)
+        ZStack {
+            // Tappable video layer
+            Button {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    isPaused.toggle()
+                }
+            } label: {
+                ZStack {
+                    videoBackground
+                    LinearGradient(
+                        colors: [.clear, .black.opacity(0.72)],
+                        startPoint: UnitPoint(x: 0.5, y: 0.35),
+                        endPoint: .bottom
+                    )
+                    // Pause / resume icon flash
+                    if isPaused {
+                        Image(systemName: "play.circle.fill")
+                            .font(.system(size: 72))
+                            .foregroundStyle(.white.opacity(0.88))
+                            .shadow(color: .black.opacity(0.4), radius: 12)
+                            .transition(
+                                .scale(scale: 0.6).combined(with: .opacity)
+                            )
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 116)
+            .buttonStyle(.plain)
+            .ignoresSafeArea()
+
+            // Bottom info + action rail (buttons handle their own taps)
+            VStack(spacing: 0) {
+                Spacer(minLength: 0)
+                HStack(alignment: .bottom, spacing: 12) {
+                    exerciseInfo
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    actionRail
+                        .frame(width: 54)
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 116)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background {
-            ZStack {
-                videoBackground
-                LinearGradient(
-                    colors: [.clear, .black.opacity(0.72)],
-                    startPoint: UnitPoint(x: 0.5, y: 0.35),
-                    endPoint: .bottom
-                )
-            }
-            .ignoresSafeArea()
-        }
     }
 
     // MARK: - Video / fallback background
@@ -176,7 +230,7 @@ private struct ExploreReelCard: View {
            let url = resource.hasPrefix("https://")
                ? URL(string: resource)
                : Bundle.main.videoURL(named: resource) {
-            LoopingVideoPlayer(url: url, isMuted: isMuted, isPlaying: isPlaying)
+            LoopingVideoPlayer(url: url, isMuted: isMuted, isPlaying: effectivelyPlaying)
         } else {
             ZStack {
                 LinearGradient(

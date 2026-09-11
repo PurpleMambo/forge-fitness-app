@@ -18,8 +18,8 @@ struct MainTabView: View {
             Tab("Targets", systemImage: "scope") {
                 TargetView()
             }
-            Tab("Log", systemImage: "calendar") {
-                PlaceholderTabView(title: "Log", icon: "calendar")
+            Tab("Explore", systemImage: "film.fill") {
+                ExploreView()
             }
         }
         .tint(.appAccent)
