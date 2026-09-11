@@ -11,6 +11,7 @@ struct ExploreView: View {
     @State private var visibleID: UUID?
     @State private var detailExercise: Exercise?
     @State private var currentFilter: String = "All"
+    @State private var filterExpanded = false
     @State private var showBrowse = false
     @Namespace private var pillNamespace
 
@@ -36,8 +37,15 @@ struct ExploreView: View {
                 feedScrollView
             }
         }
-        .overlay(alignment: .top)    { exploreHeader }
-        .overlay(alignment: .bottom) { if !exercises.isEmpty { filterPillRow } }
+        .overlay(alignment: .top) { exploreHeader }
+        // Vertical icon badge sidebar — commented out in favour of the title carousel
+        // .overlay(alignment: .topTrailing) {
+        //     if !exercises.isEmpty {
+        //         filterPillRow
+        //             .padding(.top, 130)
+        //             .padding(.trailing, 12)
+        //     }
+        // }
         .sheet(item: $detailExercise) { ex in
             NavigationStack { ExerciseDetailView(exercise: ex) }
                 .presentationDragIndicator(.visible)
@@ -66,50 +74,95 @@ struct ExploreView: View {
         .task { await loadExercises() }
     }
 
-    // MARK: - Floating header
+    // MARK: - Floating header (tap title to expand/collapse filter carousel)
 
     private var exploreHeader: some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Explore")
-                    .font(.system(size: 26, weight: .heavy))
-                    .foregroundStyle(.white)
-                Text("Technique Library")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.65))
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .center) {
+                // Tappable title card — acts as the filter toggle
+                Button {
+                    withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) {
+                        filterExpanded.toggle()
+                    }
+                } label: {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Explore")
+                                .font(.system(size: 26, weight: .heavy))
+                                .foregroundStyle(.white)
+                            Text(currentFilter == "All" ? "Technique Library" : currentFilter)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(
+                                    currentFilter == "All"
+                                        ? AnyShapeStyle(Color.white.opacity(0.65))
+                                        : AnyShapeStyle(Color.appAccent)
+                                )
+                                .contentTransition(.numericText())
+                        }
+                        Image(systemName: filterExpanded ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(.white.opacity(0.6))
+                            .padding(.top, 6)
+                    }
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                Button { showBrowse = true } label: {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 44, height: 44)
+                        .glassEffect(.regular.interactive(), in: .circle)
+                }
+                .buttonStyle(.plain)
             }
-            Spacer()
-            Button { showBrowse = true } label: {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-                    .glassEffect(.regular.interactive(), in: .circle)
+            .padding(.horizontal, 20)
+
+            // Expanding filter carousel
+            if filterExpanded && !exercises.isEmpty {
+                filterCarousel
+                    .padding(.top, 12)
+                    .transition(
+                        .asymmetric(
+                            insertion: .scale(scale: 0.95, anchor: .top).combined(with: .opacity),
+                            removal:   .scale(scale: 0.95, anchor: .top).combined(with: .opacity)
+                        )
+                    )
             }
-            .buttonStyle(.plain)
         }
-        .padding(.horizontal, 20)
         .padding(.top, 60)
-        .padding(.bottom, 18)
+        .padding(.bottom, 16)
         .background {
             LinearGradient(
-                colors: [.black.opacity(0.55), .clear],
+                colors: [.black.opacity(0.65), .black.opacity(0.2), .clear],
                 startPoint: .top,
                 endPoint: .bottom
             )
             .ignoresSafeArea(edges: .top)
         }
+        // Auto-collapse when the user scrolls to a new card
+        .onChange(of: visibleID) {
+            if filterExpanded {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    filterExpanded = false
+                }
+            }
+        }
     }
 
-    // MARK: - Filter pill row (Liquid Glass morph, same pattern as week strip)
-
-    private var filterPillRow: some View {
+    // Horizontal chip carousel shown when header is expanded
+    private var filterCarousel: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             GlassEffectContainer(spacing: 8) {
                 HStack(spacing: 8) {
                     ForEach(["All"] + muscleGroups, id: \.self) { group in
                         let selected = group == currentFilter
                         Button {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                filterExpanded = false
+                            }
                             applyFilter(group)
                         } label: {
                             Text(group)
@@ -120,19 +173,67 @@ struct ExploreView: View {
                         }
                         .buttonStyle(.plain)
                         .glassEffect(
-                            selected
-                                ? .regular.tint(.appAccent).interactive()
-                                : .regular.interactive(),
+                            selected ? .regular.tint(.appAccent).interactive() : .regular.interactive(),
                             in: .capsule
                         )
-                        .glassEffectID(selected ? "pill-sel" : nil, in: pillNamespace)
+                        .glassEffectID(selected ? "carousel-sel" : nil, in: pillNamespace)
                     }
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 20)
             }
         }
-        .padding(.bottom, 10)
     }
+
+    // MARK: - Vertical icon badge sidebar (commented out — replaced by title carousel)
+    /*
+    private var filterPillRow: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            GlassEffectContainer(spacing: 10) {
+                VStack(spacing: 10) {
+                    ForEach(["All"] + muscleGroups, id: \.self) { group in
+                        filterBadge(group: group)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+        }
+        .frame(maxHeight: 420)
+    }
+
+    private func filterBadge(group: String) -> some View {
+        let selected = group == currentFilter
+        return Button { applyFilter(group) } label: {
+            Image(systemName: badgeIcon(for: group))
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(selected ? Color.appAccent : Color.white)
+                .frame(width: 52, height: 52)
+        }
+        .buttonStyle(.plain)
+        .glassEffect(
+            selected ? .regular.tint(.appAccent).interactive() : .regular.interactive(),
+            in: .rect(cornerRadius: 16)
+        )
+        .glassEffectID(selected ? "badge-sel" : nil, in: pillNamespace)
+    }
+
+    private func badgeIcon(for group: String) -> String {
+        switch group.lowercased() {
+        case "all":                         return "square.grid.2x2.fill"
+        case "chest":                       return "figure.arms.open"
+        case "back":                        return "figure.strengthtraining.traditional"
+        case "legs", "quads", "quadriceps": return "figure.run"
+        case "hamstrings":                  return "figure.walk"
+        case "shoulders":                   return "figure.mixed.cardio"
+        case "biceps", "arms":              return "dumbbell.fill"
+        case "triceps":                     return "figure.strengthtraining.functional"
+        case "core", "abs":                 return "bolt.fill"
+        case "glutes":                      return "figure.strengthtraining.traditional"
+        case "calves":                      return "figure.walk"
+        case "rear delt", "rear deltoids":  return "figure.arms.open"
+        default:                            return "dumbbell.fill"
+        }
+    }
+    */
 
     // MARK: - Feed
 
@@ -351,7 +452,7 @@ private struct ExploreGroupSheet: View {
                 HStack(spacing: 14) {
                     Image(systemName: ex.sfSymbol)
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.appAccent)
+                        .foregroundStyle(Color.appAccent)
                         .frame(width: 44, height: 44)
                         .glassEffect(.regular.tint(.appAccent), in: .rect(cornerRadius: 10))
 
@@ -366,7 +467,7 @@ private struct ExploreGroupSheet: View {
                     Spacer()
                     if ex.videoResource != nil {
                         Image(systemName: "play.circle.fill")
-                            .foregroundStyle(.appAccent)
+                            .foregroundStyle(Color.appAccent)
                             .font(.system(size: 20))
                     }
                 }
@@ -434,7 +535,7 @@ private struct ExploreReelCard: View {
                         .frame(width: 54)
                 }
                 .padding(.horizontal, 20)
-                .padding(.bottom, 170) // clears filter pills + tab bar
+                .padding(.bottom, 116)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
