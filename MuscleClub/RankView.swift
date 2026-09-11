@@ -316,6 +316,11 @@ struct RankView: View {
     // MARK: - Data loading
 
     private func load() async {
+        #if DEBUG
+        currentUserId = "uid-me"
+        entries = mockEntries
+        isLoading = false
+        #else
         currentUserId = (try? await supabase.auth.session.user.id.uuidString) ?? ""
         do {
             let rows: [LeaderboardRow] = try await supabase
@@ -327,6 +332,7 @@ struct RankView: View {
             print("RankView load error:", error)
         }
         isLoading = false
+        #endif
     }
 }
 
