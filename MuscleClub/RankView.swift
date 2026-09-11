@@ -37,6 +37,9 @@ private struct LeaderboardRow: Decodable, Identifiable {
     var id: String { user_id }
 }
 
+// Proper steel silver for rank 2
+private let silverColor = Color(red: 0.68, green: 0.74, blue: 0.86)
+
 // MARK: - RankView
 
 struct RankView: View {
@@ -45,6 +48,9 @@ struct RankView: View {
     @State private var entries: [LeaderboardRow] = []
     @State private var isLoading = true
     @State private var currentUserId: String = ""
+
+    // Per-column draw progress: index 0 = left (rank 2), 1 = center (rank 1), 2 = right (rank 3)
+    @State private var podiumProgress: [CGFloat] = [0, 0, 0]
 
     private let avatarNames = ["guy_pfp1", "guy_pfp2", "girl_pfp1", "girl_pfp2", "girl_pfp3"]
 
@@ -130,15 +136,30 @@ struct RankView: View {
     private var podiumSection: some View {
         let top3 = Array(entries.prefix(3))
         return HStack(alignment: .bottom, spacing: 10) {
-            podiumSlot(entry: top3[1], rank: 2, podiumHeight: 75)
-            podiumSlot(entry: top3[0], rank: 1, podiumHeight: 108)
-            podiumSlot(entry: top3[2], rank: 3, podiumHeight: 56)
+            podiumSlot(entry: top3[1], rank: 2, podiumHeight: 75,  progress: podiumProgress[0])
+            podiumSlot(entry: top3[0], rank: 1, podiumHeight: 108, progress: podiumProgress[1])
+            podiumSlot(entry: top3[2], rank: 3, podiumHeight: 56,  progress: podiumProgress[2])
+        }
+        .onAppear { animatePodium() }
+        .onDisappear { podiumProgress = [0, 0, 0] } // reset so it replays next visit
+    }
+
+    // Award-show reveal: #3 rises first, then #2, then #1 last (most dramatic)
+    private func animatePodium() {
+        podiumProgress = [0, 0, 0]
+        Task {
+            try? await Task.sleep(for: .milliseconds(280))
+            withAnimation(.spring(response: 0.55, dampingFraction: 0.72)) { podiumProgress[2] = 1 } // rank 3
+            try? await Task.sleep(for: .milliseconds(160))
+            withAnimation(.spring(response: 0.55, dampingFraction: 0.72)) { podiumProgress[0] = 1 } // rank 2
+            try? await Task.sleep(for: .milliseconds(160))
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.62)) { podiumProgress[1] = 1 }  // rank 1 — bouncier
         }
     }
 
-    private func podiumSlot(entry: LeaderboardRow, rank: Int, podiumHeight: CGFloat) -> some View {
+    private func podiumSlot(entry: LeaderboardRow, rank: Int, podiumHeight: CGFloat, progress: CGFloat) -> some View {
         let isMe = entry.user_id == currentUserId
-        let ringColor: Color = rank == 1 ? .appGold : (isMe ? .appAccent : .white.opacity(0.25))
+        let ringColor: Color = rank == 1 ? .appGold : (rank == 2 ? silverColor : (isMe ? .appAccent : .white.opacity(0.25)))
 
         return VStack(spacing: 6) {
             Image(avatar(for: entry.user_id))
@@ -147,7 +168,7 @@ struct RankView: View {
                 .frame(width: rank == 1 ? 64 : 52, height: rank == 1 ? 64 : 52)
                 .clipShape(Circle())
                 .overlay(Circle().stroke(ringColor, lineWidth: rank == 1 ? 3 : 1.5))
-                .shadow(color: rank == 1 ? Color.appGold.opacity(0.45) : .clear, radius: 10)
+                .shadow(color: rank == 1 ? Color.appGold.opacity(0.45) : (rank == 2 ? silverColor.opacity(0.4) : .clear), radius: 10)
 
             rankBadge(rank: rank)
 
@@ -164,16 +185,19 @@ struct RankView: View {
                     .foregroundStyle(entry.current_streak > 0 ? Color.primary : Color.secondary)
             }
 
-            RoundedRectangle(cornerRadius: 10)
-                .fill(podiumFill(rank: rank))
-                .frame(height: podiumHeight)
-                .overlay(
-                    Text("#\(rank)")
-                        .font(.system(size: 18, weight: .black))
-                        .foregroundStyle(.black.opacity(0.35))
-                        .padding(.bottom, 8),
-                    alignment: .bottom
-                )
+            // Block grows from bottom; text fades in independently
+            ZStack(alignment: .bottom) {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(podiumFill(rank: rank))
+                    .frame(height: podiumHeight)
+                    .scaleEffect(y: progress, anchor: .bottom)
+                Text("#\(rank)")
+                    .font(.system(size: 18, weight: .black))
+                    .foregroundStyle(.black.opacity(0.35))
+                    .padding(.bottom, 8)
+                    .opacity(progress)
+            }
+            .frame(height: podiumHeight)
         }
         .frame(maxWidth: .infinity)
     }
@@ -187,8 +211,8 @@ struct RankView: View {
                 .foregroundStyle(Color.appGold)
         case 2:
             ZStack {
-                Circle().fill(Color.white.opacity(0.18)).frame(width: 20, height: 20)
-                Text("2").font(.system(size: 11, weight: .black)).foregroundStyle(.primary)
+                Circle().fill(silverColor.opacity(0.28)).frame(width: 20, height: 20)
+                Text("2").font(.system(size: 11, weight: .black)).foregroundStyle(silverColor)
             }
         default:
             ZStack {
@@ -201,7 +225,7 @@ struct RankView: View {
     private func podiumFill(rank: Int) -> Color {
         switch rank {
         case 1: return Color.appGold.opacity(0.80)
-        case 2: return Color.white.opacity(0.20)
+        case 2: return silverColor.opacity(0.55)
         case 3: return Color(red: 0.75, green: 0.45, blue: 0.2).opacity(0.65)
         default: return Color.white.opacity(0.10)
         }
