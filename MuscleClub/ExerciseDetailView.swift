@@ -37,6 +37,14 @@ struct LoopingVideoPlayer: UIViewRepresentable {
         uiView.setPlaying(isPlaying)
     }
 
+    static func dismantleUIView(_ uiView: PlayerView, coordinator: Coordinator) {
+        uiView.setPlaying(false)
+        if let obs = coordinator.observer {
+            NotificationCenter.default.removeObserver(obs)
+            coordinator.observer = nil
+        }
+    }
+
     class Coordinator {
         var observer: NSObjectProtocol?
         weak var player: AVPlayer?

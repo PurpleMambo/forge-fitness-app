@@ -13,6 +13,7 @@ struct ExploreView: View {
     @State private var currentFilter: String = "All"
     @State private var filterExpanded = false
     @State private var showBrowse = false
+    @State private var isMuted = false
     @Namespace private var pillNamespace
 
     // Ordered, deduplicated muscle groups preserving first-seen order
@@ -37,7 +38,7 @@ struct ExploreView: View {
                 feedScrollView
             }
         }
-        .overlay(alignment: .top) { exploreHeader }
+        .safeAreaInset(edge: .top, spacing: 0) { exploreHeader }
         // Vertical icon badge sidebar — commented out in favour of the title carousel
         // .overlay(alignment: .topTrailing) {
         //     if !exercises.isEmpty {
@@ -132,7 +133,7 @@ struct ExploreView: View {
                     )
             }
         }
-        .padding(.top, 60)
+        .padding(.top, 4)
         .padding(.bottom, 16)
         .background {
             LinearGradient(
@@ -244,6 +245,7 @@ struct ExploreView: View {
                     ExploreReelCard(
                         exercise: ex,
                         isPlaying: visibleID == ex.id,
+                        isMuted: $isMuted,
                         onInfo: { detailExercise = ex }
                     )
                     .containerRelativeFrame([.horizontal, .vertical])
@@ -292,11 +294,16 @@ struct ExploreView: View {
     // MARK: - Helpers
 
     private func applyFilter(_ group: String) {
+        // Stop any playing video before swapping the feed
+        visibleID = nil
         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
             currentFilter = group
         }
         let first = (group == "All" ? exercises : exercises.filter { $0.muscleGroup == group }).first
-        withAnimation { visibleID = first?.id }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(80))
+            withAnimation { visibleID = first?.id }
+        }
     }
 
     // MARK: - Data loading
@@ -490,9 +497,9 @@ private struct ExploreGroupSheet: View {
 private struct ExploreReelCard: View {
     let exercise: Exercise
     let isPlaying: Bool
+    @Binding var isMuted: Bool
     let onInfo: () -> Void
 
-    @State private var isMuted = true
     @State private var isPaused = false
 
     private var effectivelyPlaying: Bool { isPlaying && !isPaused }
@@ -539,6 +546,11 @@ private struct ExploreReelCard: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // When this card loses focus (filter switch or scroll away), reset pause state
+        // so the video is ready to play cleanly if the card becomes visible again.
+        .onChange(of: isPlaying) { _, playing in
+            if !playing { isPaused = false }
+        }
     }
 
     // MARK: - Video / fallback background
