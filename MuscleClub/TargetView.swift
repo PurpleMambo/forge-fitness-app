@@ -15,29 +15,6 @@ private struct GoalMilestone: Identifiable {
     let detail: String
 }
 
-// Static milestone definitions — status is computed from live data
-private struct MilestoneDef {
-    let id: Int
-    let title: String
-    let subtitle: String
-    let icon: String
-    let detail: String
-    let workoutThreshold: Int  // # workouts needed to mark completed
-}
-
-private let milestoneDefs: [MilestoneDef] = [
-    .init(id: 1,  title: "First Steps",         subtitle: "Weeks 1–2",   icon: "figure.walk",                         detail: "Log your first 6 workouts",             workoutThreshold: 6),
-    .init(id: 2,  title: "Build the Habit",     subtitle: "Weeks 3–4",   icon: "flame.fill",                          detail: "Reach a 2-week workout streak",          workoutThreshold: 12),
-    .init(id: 3,  title: "Stay Consistent",     subtitle: "Weeks 5–8",   icon: "bolt.fill",                           detail: "Complete 12 workouts this month",        workoutThreshold: 18),
-    .init(id: 4,  title: "Find Your Strength",  subtitle: "Month 3",     icon: "dumbbell.fill",                       detail: "Increase weight on every lift",          workoutThreshold: 22),
-    .init(id: 5,  title: "Unlock Volume",       subtitle: "Month 3–4",   icon: "arrow.up.circle.fill",                detail: "3 sets × 10 reps across the board",     workoutThreshold: 26),
-    .init(id: 6,  title: "Nutrition Lock-In",   subtitle: "Month 4",     icon: "fork.knife",                          detail: "Track meals for 30 straight days",       workoutThreshold: 30),
-    .init(id: 7,  title: "Push the Limit",      subtitle: "Month 4–5",   icon: "chart.line.uptrend.xyaxis",           detail: "Add 5 kg to your baseline lifts",        workoutThreshold: 33),
-    .init(id: 8,  title: "Strength Summit",     subtitle: "Month 5",     icon: "trophy.fill",                         detail: "New 1-rep max on the big 3",             workoutThreshold: 36),
-    .init(id: 9,  title: "Final Sprint",        subtitle: "Month 5–6",   icon: "hare.fill",                           detail: "12 workouts in the last 6 weeks",        workoutThreshold: 38),
-    .init(id: 10, title: "Body Transformation", subtitle: "Month 6",     icon: "figure.strengthtraining.traditional", detail: "Complete all 40 program workouts",       workoutThreshold: 40),
-]
-
 // MARK: - Target View
 
 struct TargetView: View {
@@ -72,13 +49,14 @@ struct TargetView: View {
     }
 
     private var weekSubtitle: String { "Week \(currentWeek) of \(totalWeeks)" }
+    private var totalWorkouts: Int { programService.milestones.last?.workoutThreshold ?? 40 }
 
     // The first milestone not yet met becomes .current; everything before → .completed, after → .upcoming
     private var milestones: [GoalMilestone] {
         var foundCurrent = false
-        return milestoneDefs.map { def in
+        return programService.milestones.map { m in
             let status: MilestoneStatus
-            if workoutCount >= def.workoutThreshold {
+            if workoutCount >= m.workoutThreshold {
                 status = .completed
             } else if !foundCurrent {
                 foundCurrent = true
@@ -87,8 +65,8 @@ struct TargetView: View {
                 status = .upcoming
             }
             return GoalMilestone(
-                id: def.id, title: def.title, subtitle: def.subtitle,
-                icon: def.icon, status: status, detail: def.detail
+                id: m.sortOrder, title: m.title, subtitle: m.subtitle,
+                icon: m.sfSymbol, status: status, detail: m.detail
             )
         }
     }
@@ -295,7 +273,7 @@ struct TargetView: View {
                     .lineSpacing(3)
 
                 HStack(spacing: 14) {
-                    Label("40 Workouts", systemImage: "dumbbell.fill")
+                    Label("\(totalWorkouts) Workouts", systemImage: "dumbbell.fill")
                     Label("\(totalWeeks) Weeks",    systemImage: "calendar")
                 }
                 .font(.system(size: 12, weight: .semibold))

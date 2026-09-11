@@ -103,6 +103,25 @@ struct RemoteUserProgram: Codable, Identifiable {
     }
 }
 
+struct RemoteMilestone: Codable, Identifiable {
+    let id: UUID
+    let programId: UUID
+    let sortOrder: Int
+    let title: String
+    let subtitle: String
+    let sfSymbol: String
+    let detail: String
+    let workoutThreshold: Int
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, subtitle, detail
+        case programId        = "program_id"
+        case sortOrder        = "sort_order"
+        case sfSymbol         = "sf_symbol"
+        case workoutThreshold = "workout_threshold"
+    }
+}
+
 struct RemoteLoggedSet: Codable, Identifiable {
     let id: UUID
     let userId: UUID

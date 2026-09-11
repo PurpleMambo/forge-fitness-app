@@ -29,6 +29,7 @@ final class ProgramService {
 
     private(set) var userProgram: RemoteUserProgram?
     private(set) var templates: [RemoteWorkoutTemplate] = []
+    private(set) var milestones: [RemoteMilestone] = []
     private var exerciseCache: [UUID: [RemoteWorkoutExercise]] = [:]
 
     // MARK: - Bootstrap
@@ -42,7 +43,10 @@ final class ProgramService {
             programs    = try await p
             userProgram = try await u
             if let up = userProgram {
-                templates = try await fetchTemplates(programId: up.programId)
+                async let t = fetchTemplates(programId: up.programId)
+                async let m = fetchMilestones(programId: up.programId)
+                templates  = try await t
+                milestones = try await m
             }
         } catch {
             self.error = error.localizedDescription
@@ -109,7 +113,10 @@ final class ProgramService {
             .single()
             .execute()
             .value
-        templates = try await fetchTemplates(programId: programId)
+        async let t = fetchTemplates(programId: programId)
+        async let m = fetchMilestones(programId: programId)
+        templates  = try await t
+        milestones = try await m
         exerciseCache.removeAll()
     }
 
@@ -155,6 +162,16 @@ final class ProgramService {
             .select()
             .eq("program_id", value: programId.uuidString)
             .order("week_number")
+            .order("sort_order")
+            .execute()
+            .value
+    }
+
+    private func fetchMilestones(programId: UUID) async throws -> [RemoteMilestone] {
+        try await supabase
+            .from("program_milestones")
+            .select()
+            .eq("program_id", value: programId.uuidString)
             .order("sort_order")
             .execute()
             .value

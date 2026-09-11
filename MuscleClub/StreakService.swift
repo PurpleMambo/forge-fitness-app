@@ -17,6 +17,7 @@ final class StreakService {
         didSet { UserDefaults.standard.set(longestStreak, forKey: "streak_longest") }
     }
     var workoutDayNames: Set<String> = []
+    var totalWorkouts: Int { loggedDates.count }
 
     private var loggedDates: Set<String> = []
 

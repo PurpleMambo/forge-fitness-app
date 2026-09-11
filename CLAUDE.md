@@ -157,6 +157,47 @@ The app is dark-only (`.preferredColorScheme(.dark)` at root).
 | `appGold` | Golden yellow | Section headers, focus labels |
 | `appBg` | Dark purple-black | Background reference (use `AppBackground` instead) |
 
+### Target tab & milestone system (`TargetView.swift`)
+
+The Target tab shows a progress ring, hero stats, and a vertical milestone timeline. All milestone data is **fully dynamic — stored in Supabase, not hardcoded in Swift**.
+
+**Data flow:**
+1. `ProgramService.loadAll()` fetches `program_milestones` in parallel with templates
+2. `ProgramService.milestones: [RemoteMilestone]` is exposed to views
+3. `TargetView` maps `programService.milestones` → `[GoalMilestone]`, computing `.completed / .current / .upcoming` status by comparing `streakService.totalWorkouts` against each milestone's `workoutThreshold`
+
+**Supabase table: `program_milestones`**
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | UUID | PK |
+| `program_id` | UUID | FK → `programs.id` |
+| `sort_order` | INT | Display order (1-based) |
+| `title` | TEXT | e.g. "Build the Habit" |
+| `subtitle` | TEXT | e.g. "Weeks 3–4" |
+| `sf_symbol` | TEXT | SF Symbol name, e.g. "flame.fill" |
+| `detail` | TEXT | One-line description shown in the card |
+| `workout_threshold` | INT | Logged workouts required to complete this milestone |
+
+**Adding a new program — checklist:**
+
+1. **Supabase `programs` table** — INSERT a new row with a fresh UUID, `name`, `name_is`, `gender`, `days_per_week`
+2. **Supabase `workout_templates`** — INSERT weekly templates (`week_number`, `day_of_week`, `sort_order`) for the new `program_id`
+3. **Supabase `workout_exercises`** — INSERT exercises for each template, referencing rows in the `exercises` table
+4. **Supabase `program_milestones`** — INSERT milestone rows for the new `program_id` with appropriate `workout_threshold` values and SF Symbols
+5. **`NewOnboardingFlowView.swift` → `selectedProgramId`** — extend the computed property to return the new program's UUID based on the onboarding answers (currently only branches on gender via step id 25; add goal-type branching here when needed)
+
+No Swift model changes are required — `RemoteMilestone` and `ProgramService` already handle any program generically.
+
+**Current programs:**
+
+| UUID | Gender | Name |
+|---|---|---|
+| `a0000000-0000-0000-0000-000000000001` | Male | Build Muscle (Male) |
+| `a0000000-0000-0000-0000-000000000002` | Female | Build Muscle (Female) |
+
+Program assignment is currently gender-only (onboarding step id 25). When adding goal-type programs (e.g. "Get Lean", "Powerlifting"), also store the fitness goal answer from step id 0 and combine it with gender in `selectedProgramId`.
+
 ### Supabase project
 
 - URL: `https://neomyrexkfgrsrcqvnsb.supabase.co`
