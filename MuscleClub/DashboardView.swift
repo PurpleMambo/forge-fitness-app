@@ -12,8 +12,8 @@ struct MainTabView: View {
             Tab("Workout", systemImage: "dumbbell.fill") {
                 DashboardView()
             }
-            Tab("Body", systemImage: "figure.arms.open") {
-                PlaceholderTabView(title: "Body", icon: "figure.arms.open")
+            Tab("Rank", systemImage: "trophy.fill") {
+                RankView()
             }
             Tab("Targets", systemImage: "scope") {
                 TargetView()
