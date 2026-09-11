@@ -3,9 +3,10 @@ import Playgrounds
 import GoogleSignIn
 
 @main struct MyApp: App {
-    @State private var appState      = AppState()
-    @State private var storeVM       = StoreVM()
+    @State private var appState       = AppState()
+    @State private var storeVM        = StoreVM()
     @State private var programService = ProgramService()
+    @State private var streakService  = StreakService()
 
     var body: some Scene {
         WindowGroup {
@@ -13,6 +14,7 @@ import GoogleSignIn
                 .environment(appState)
                 .environment(storeVM)
                 .environment(programService)
+                .environment(streakService)
         }
     }
 }
@@ -46,6 +48,7 @@ struct RootView: View {
         .environment(AppState())
         .environment(StoreVM())
         .environment(ProgramService())
+        .environment(StreakService())
 }
 
 #Playground {

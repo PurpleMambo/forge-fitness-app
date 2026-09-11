@@ -1,4 +1,5 @@
 import SwiftUI
+import DotLottie
 
 // MARK: - Workout Summary (shown after Log Workout, with confetti celebration)
 struct WorkoutSummaryView: View {
@@ -7,10 +8,16 @@ struct WorkoutSummaryView: View {
     let workoutStore: WorkoutStore
     var onDone: () -> Void
 
+    @Environment(StreakService.self) private var streakService
+
     private let completedAt = Date()
 
     @State private var showOptions = false
     @State private var showShare  = false
+    @StateObject private var flameLottie = DotLottieAnimation(
+        fileName: "Flame animation",
+        config: AnimationConfig(autoplay: true, loop: true, speed: 1.8)
+    )
 
     // MARK: - Computed stats
 
@@ -65,6 +72,9 @@ struct WorkoutSummaryView: View {
                 VStack(spacing: 0) {
                     headerBar
                     heroSection
+                    streakCard
+                        .padding(.top, 20)
+                        .padding(.horizontal, 18)
                     statsRow
                     exerciseSection
                     Spacer(minLength: 120)
@@ -72,6 +82,14 @@ struct WorkoutSummaryView: View {
             }
 
             bottomButtons
+        }
+        .task {
+            await streakService.logWorkout(
+                workoutName: workout.name,
+                durationSeconds: elapsedSeconds,
+                volumeKg: totalVolume,
+                calories: caloriesEstimate
+            )
         }
         .sheet(isPresented: $showOptions) {
             WorkoutOptionsSheet(
@@ -104,16 +122,18 @@ struct WorkoutSummaryView: View {
 
             HStack {
                 Spacer()
-                HStack(spacing: 8) {
+                HStack(spacing: 10) {
                     Button { showShare = true } label: {
                         Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.system(size: 18, weight: .semibold))
+                            .frame(width: 44, height: 44)
                     }
                     .buttonStyle(.glass)
 
                     Button { showOptions = true } label: {
                         Image(systemName: "ellipsis")
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.system(size: 18, weight: .semibold))
+                            .frame(width: 44, height: 44)
                     }
                     .buttonStyle(.glass)
                 }
@@ -147,6 +167,38 @@ struct WorkoutSummaryView: View {
                 .font(.system(size: 15))
                 .foregroundStyle(.secondary)
         }
+    }
+
+    // MARK: - Streak card
+
+    var streakCard: some View {
+        HStack(spacing: 16) {
+            flameLottie.view()
+                .frame(width: 150, height: 150)
+                .clipped()
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(streakService.currentStreak == 1 ? "1 Day Streak!" : "\(streakService.currentStreak) Day Streak!")
+                    .font(.system(size: 26, weight: .heavy))
+                if streakService.longestStreak > streakService.currentStreak {
+                    Text("Best: \(streakService.longestStreak) days")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                } else if streakService.currentStreak > 0 {
+                    Text("Personal best!")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.orange)
+                } else {
+                    Text("Start your streak today!")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Spacer()
+        }
+        .padding(20)
+        .glassEffect(.regular, in: .rect(cornerRadius: 20))
     }
 
     // MARK: - Stats row
@@ -360,5 +412,6 @@ struct ConfettiView: View {
         workoutStore: state.workoutStore,
         onDone: {}
     )
+    .environment(StreakService(previewStreak: 1))
     .preferredColorScheme(.dark)
 }

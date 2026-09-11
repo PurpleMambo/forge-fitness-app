@@ -1,5 +1,6 @@
 import SwiftUI
 import Supabase
+import DotLottie
 
 // MARK: - Main Tab View (native iOS 26 — Liquid Glass tab bar is automatic)
 struct MainTabView: View {
@@ -138,6 +139,7 @@ private struct AnimatedCheckmark: View {
 struct DashboardView: View {
     @Environment(AppState.self) var appState
     @Environment(ProgramService.self) private var programService
+    @Environment(StreakService.self) private var streakService
     @Namespace private var dayNamespace
     private let cal = Calendar.current
     @State private var setupExercise: Exercise? = nil
@@ -270,6 +272,10 @@ struct DashboardView: View {
                     }
                     .buttonStyle(.plain)
                 }
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    StreakBadgeView(streak: streakService.currentStreak)
+                }
             }
         }
         .sheet(item: $setupExercise) { ex in
@@ -295,8 +301,16 @@ struct DashboardView: View {
         }
         .task { await loadTodayExercises() }
         .task { await loadToolbarUser() }
+        .task {
+            streakService.workoutDayNames = Set(programService.templates.map { $0.dayOfWeek })
+            await streakService.loadStreak()
+        }
         .onChange(of: appState.selectedDate) { Task { await loadTodayExercises() } }
         .onChange(of: programService.userProgram?.id) { Task { await loadTodayExercises() } }
+        .onChange(of: programService.templates.count) {
+            streakService.workoutDayNames = Set(programService.templates.map { $0.dayOfWeek })
+            streakService.refresh()
+        }
     }
 
     private func loadToolbarUser() async {
@@ -537,11 +551,50 @@ struct DashboardView: View {
 
 }
 
-#Preview {
+// MARK: - Streak badge (needs its own struct for @StateObject DotLottieAnimation)
+private struct StreakBadgeView: View {
+    let streak: Int
+
+    @StateObject private var flameLottie = DotLottieAnimation(
+        fileName: "Flame animation",
+        config: AnimationConfig(autoplay: true, loop: true, speed: 1.8)
+    )
+
+    var body: some View {
+        HStack(spacing: 4) {
+            if streak > 0 {
+                flameLottie.view()
+                    .frame(width: 34, height: 34)
+            } else {
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.secondary)
+                    .frame(width: 34, height: 34)
+            }
+            Text("\(streak)")
+                .font(.system(size: 15, weight: .bold))
+                .monospacedDigit()
+        }
+        .padding(.horizontal, 6)
+    }
+}
+
+#Preview("Dashboard — no streak") {
     let state = AppState()
     state.onboardingComplete = true
     return MainTabView()
         .environment(state)
         .environment(ProgramService())
         .environment(StoreVM())
+        .environment(StreakService())
+}
+
+#Preview("Dashboard — 5 day streak") {
+    let state = AppState()
+    state.onboardingComplete = true
+    return MainTabView()
+        .environment(state)
+        .environment(ProgramService())
+        .environment(StoreVM())
+        .environment(StreakService(previewStreak: 5))
 }

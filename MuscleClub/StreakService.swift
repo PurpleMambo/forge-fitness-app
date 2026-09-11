@@ -20,6 +20,14 @@ final class StreakService {
 
     private var loggedDates: Set<String> = []
 
+    // For SwiftUI previews — sets streak without hitting Supabase or UserDefaults
+    init(previewStreak: Int) {
+        currentStreak = previewStreak
+        longestStreak = previewStreak
+    }
+
+    init() {}
+
     // MARK: - Public API
 
     func loadStreak() async {
