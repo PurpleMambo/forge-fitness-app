@@ -10,6 +10,19 @@ struct ExploreView: View {
     @State private var isLoading = false
     @State private var visibleID: UUID?
     @State private var detailExercise: Exercise?
+    @State private var currentFilter: String = "All"
+    @State private var showBrowse = false
+    @Namespace private var pillNamespace
+
+    // Ordered, deduplicated muscle groups preserving first-seen order
+    var muscleGroups: [String] {
+        var seen = Set<String>()
+        return exercises.compactMap { seen.insert($0.muscleGroup).inserted ? $0.muscleGroup : nil }
+    }
+
+    var filteredExercises: [Exercise] {
+        currentFilter == "All" ? exercises : exercises.filter { $0.muscleGroup == currentFilter }
+    }
 
     var body: some View {
         ZStack {
@@ -23,12 +36,32 @@ struct ExploreView: View {
                 feedScrollView
             }
         }
-        .overlay(alignment: .top) {
-            exploreHeader
-        }
+        .overlay(alignment: .top)    { exploreHeader }
+        .overlay(alignment: .bottom) { if !exercises.isEmpty { filterPillRow } }
         .sheet(item: $detailExercise) { ex in
             NavigationStack { ExerciseDetailView(exercise: ex) }
                 .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showBrowse) {
+            ExploreGroupSheet(
+                exercises: exercises,
+                muscleGroups: muscleGroups,
+                onSelectExercise: { ex in
+                    showBrowse = false
+                    currentFilter = ex.muscleGroup
+                    Task {
+                        try? await Task.sleep(nanoseconds: 250_000_000)
+                        withAnimation { visibleID = ex.id }
+                    }
+                },
+                onSelectGroup: { group in
+                    showBrowse = false
+                    applyFilter(group)
+                }
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+            .presentationBackground(.ultraThinMaterial)
         }
         .task { await loadExercises() }
     }
@@ -36,7 +69,7 @@ struct ExploreView: View {
     // MARK: - Floating header
 
     private var exploreHeader: some View {
-        HStack(spacing: 0) {
+        HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Explore")
                     .font(.system(size: 26, weight: .heavy))
@@ -46,6 +79,14 @@ struct ExploreView: View {
                     .foregroundStyle(.white.opacity(0.65))
             }
             Spacer()
+            Button { showBrowse = true } label: {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+                    .glassEffect(.regular.interactive(), in: .circle)
+            }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 20)
         .padding(.top, 60)
@@ -58,7 +99,39 @@ struct ExploreView: View {
             )
             .ignoresSafeArea(edges: .top)
         }
-        .allowsHitTesting(false)
+    }
+
+    // MARK: - Filter pill row (Liquid Glass morph, same pattern as week strip)
+
+    private var filterPillRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            GlassEffectContainer(spacing: 8) {
+                HStack(spacing: 8) {
+                    ForEach(["All"] + muscleGroups, id: \.self) { group in
+                        let selected = group == currentFilter
+                        Button {
+                            applyFilter(group)
+                        } label: {
+                            Text(group)
+                                .font(.subheadline.weight(selected ? .bold : .medium))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 9)
+                        }
+                        .buttonStyle(.plain)
+                        .glassEffect(
+                            selected
+                                ? .regular.tint(.appAccent).interactive()
+                                : .regular.interactive(),
+                            in: .capsule
+                        )
+                        .glassEffectID(selected ? "pill-sel" : nil, in: pillNamespace)
+                    }
+                }
+                .padding(.horizontal, 16)
+            }
+        }
+        .padding(.bottom, 10)
     }
 
     // MARK: - Feed
@@ -66,7 +139,7 @@ struct ExploreView: View {
     private var feedScrollView: some View {
         ScrollView(.vertical, showsIndicators: false) {
             LazyVStack(spacing: 0) {
-                ForEach(exercises) { ex in
+                ForEach(filteredExercises) { ex in
                     ExploreReelCard(
                         exercise: ex,
                         isPlaying: visibleID == ex.id,
@@ -82,11 +155,11 @@ struct ExploreView: View {
         .scrollPosition(id: $visibleID)
         .ignoresSafeArea(edges: [.top, .bottom])
         .onAppear {
-            if visibleID == nil { visibleID = exercises.first?.id }
+            if visibleID == nil { visibleID = filteredExercises.first?.id }
         }
     }
 
-    // MARK: - Loading / Empty states
+    // MARK: - Loading / Empty
 
     private var loadingView: some View {
         VStack(spacing: 14) {
@@ -115,6 +188,16 @@ struct ExploreView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    // MARK: - Helpers
+
+    private func applyFilter(_ group: String) {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            currentFilter = group
+        }
+        let first = (group == "All" ? exercises : exercises.filter { $0.muscleGroup == group }).first
+        withAnimation { visibleID = first?.id }
+    }
+
     // MARK: - Data loading
 
     private func loadExercises() async {
@@ -134,10 +217,8 @@ struct ExploreView: View {
                 .map { remote in
                     Exercise(
                         name: remote.nameEn,
-                        sets: 3,
-                        reps: 10,
-                        weight: 0,
-                        weightUnit: "kg",
+                        sets: 3, reps: 10,
+                        weight: 0, weightUnit: "kg",
                         muscleGroup: remote.muscleGroup,
                         isFocus: false,
                         sfSymbol: remote.sfSymbol,
@@ -153,13 +234,153 @@ struct ExploreView: View {
             }
         } catch {}
 
-        // Fallback: sample data bundled in the app
+        // Fallback: bundled sample data
         let sample = WorkoutDay.weekSchedule
             .compactMap { $0 }
             .flatMap { $0.exercises }
             .filter { $0.videoResource != nil }
         exercises = sample
         visibleID = sample.first?.id
+    }
+}
+
+// MARK: - Browse / Search Sheet
+
+private struct ExploreGroupSheet: View {
+    let exercises: [Exercise]
+    let muscleGroups: [String]
+    let onSelectExercise: (Exercise) -> Void
+    let onSelectGroup: (String) -> Void
+
+    @State private var searchQuery = ""
+
+    private var searchResults: [Exercise] {
+        guard !searchQuery.isEmpty else { return [] }
+        return exercises.filter { $0.name.localizedCaseInsensitiveContains(searchQuery) }
+    }
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if searchQuery.isEmpty {
+                    groupList
+                } else {
+                    searchResultsList
+                }
+            }
+            .navigationTitle("Browse")
+            .navigationBarTitleDisplayMode(.large)
+            .searchable(
+                text: $searchQuery,
+                placement: .navigationBarDrawer(displayMode: .always),
+                prompt: "Search exercises…"
+            )
+            .scrollContentBackground(.hidden)
+            .background(.clear)
+        }
+    }
+
+    // MARK: - Group playlist cards
+
+    private var groupList: some View {
+        List {
+            Section {
+                groupRowButton(
+                    name: "All Exercises",
+                    count: exercises.count,
+                    symbol: "play.square.stack.fill",
+                    tint: .appAccent
+                ) { onSelectGroup("All") }
+            }
+            .listRowBackground(Color.clear)
+
+            Section("By muscle group") {
+                ForEach(muscleGroups, id: \.self) { group in
+                    let groupExercises = exercises.filter { $0.muscleGroup == group }
+                    groupRowButton(
+                        name: group,
+                        count: groupExercises.count,
+                        symbol: groupExercises.first?.sfSymbol ?? "dumbbell.fill",
+                        tint: .appAccent
+                    ) { onSelectGroup(group) }
+                }
+            }
+            .listRowBackground(Color.clear)
+        }
+        .listStyle(.insetGrouped)
+    }
+
+    private func groupRowButton(
+        name: String,
+        count: Int,
+        symbol: String,
+        tint: Color,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                Image(systemName: symbol)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(tint)
+                    .frame(width: 48, height: 48)
+                    .glassEffect(.regular.tint(tint), in: .rect(cornerRadius: 12))
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(name)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Text("\(count) exercise\(count == 1 ? "" : "s")")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.vertical, 4)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Search results
+
+    private var searchResultsList: some View {
+        List(searchResults) { ex in
+            Button { onSelectExercise(ex) } label: {
+                HStack(spacing: 14) {
+                    Image(systemName: ex.sfSymbol)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.appAccent)
+                        .frame(width: 44, height: 44)
+                        .glassEffect(.regular.tint(.appAccent), in: .rect(cornerRadius: 10))
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(ex.name)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
+                        Text(ex.muscleGroup)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    if ex.videoResource != nil {
+                        Image(systemName: "play.circle.fill")
+                            .foregroundStyle(.appAccent)
+                            .font(.system(size: 20))
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+            .buttonStyle(.plain)
+            .listRowBackground(Color.clear)
+        }
+        .listStyle(.plain)
+        .overlay {
+            if searchResults.isEmpty {
+                ContentUnavailableView.search(text: searchQuery)
+            }
+        }
     }
 }
 
@@ -177,7 +398,7 @@ private struct ExploreReelCard: View {
 
     var body: some View {
         ZStack {
-            // Tappable video layer
+            // Tappable video background — tap anywhere to pause/resume
             Button {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                     isPaused.toggle()
@@ -190,15 +411,12 @@ private struct ExploreReelCard: View {
                         startPoint: UnitPoint(x: 0.5, y: 0.35),
                         endPoint: .bottom
                     )
-                    // Pause / resume icon flash
                     if isPaused {
                         Image(systemName: "play.circle.fill")
                             .font(.system(size: 72))
                             .foregroundStyle(.white.opacity(0.88))
                             .shadow(color: .black.opacity(0.4), radius: 12)
-                            .transition(
-                                .scale(scale: 0.6).combined(with: .opacity)
-                            )
+                            .transition(.scale(scale: 0.6).combined(with: .opacity))
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -206,7 +424,7 @@ private struct ExploreReelCard: View {
             .buttonStyle(.plain)
             .ignoresSafeArea()
 
-            // Bottom info + action rail (buttons handle their own taps)
+            // Info overlay — buttons have independent hit testing
             VStack(spacing: 0) {
                 Spacer(minLength: 0)
                 HStack(alignment: .bottom, spacing: 12) {
@@ -216,7 +434,7 @@ private struct ExploreReelCard: View {
                         .frame(width: 54)
                 }
                 .padding(.horizontal, 20)
-                .padding(.bottom, 116)
+                .padding(.bottom, 170) // clears filter pills + tab bar
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -280,11 +498,7 @@ private struct ExploreReelCard: View {
 
     private var actionRail: some View {
         VStack(spacing: 20) {
-            ExploreActionButton(
-                systemImage: "info.circle",
-                tint: .white,
-                action: onInfo
-            )
+            ExploreActionButton(systemImage: "info.circle", tint: .white, action: onInfo)
             ExploreActionButton(
                 systemImage: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill",
                 tint: isMuted ? .white.opacity(0.55) : .white,
