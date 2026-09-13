@@ -80,12 +80,12 @@ struct WelcomeView: View {
                             .italic()
                             .tracking(-0.5)
                             .lineSpacing(0)
-                            .foregroundStyle(.black)
+                            .foregroundStyle(colorScheme == .dark ? .white : .black)
 
                         Text("YOUR PERSONAL STRENGTH PROGRAM,\nBUILT TO GET YOU RESULTS.")
                             .font(.system(size: 11, weight: .semibold))
                             .tracking(1.5)
-                            .foregroundStyle(.black.opacity(0.5))
+                            .foregroundStyle(colorScheme == .dark ? .white.opacity(0.55) : .black.opacity(0.5))
                             .lineSpacing(3)
                     }
 
