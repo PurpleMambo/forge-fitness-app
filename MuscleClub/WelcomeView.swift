@@ -11,18 +11,22 @@ struct WelcomeView: View {
         ZStack {
             AppBackground()
 
-            // Photo layer — scaledToFill at 70 % screen height, right-anchored so
-            // the left background is what gets cropped, keeping the person prominent.
+            // Photo layer — scaledToFill at 70 % screen height.
+            // Adjust imagePanX to pan left/right:
+            //   positive → image shifts right (person appears further right on screen)
+            //   negative → image shifts left  (person appears further left on screen)
             GeometryReader { geo in
+                let imagePanX: CGFloat = -150
                 VStack(spacing: 0) {
-                    Image("gillz_light")
-                        .resizable()
-                        .scaledToFill()
-                        // 1. Constrain only height — image expands horizontally at its aspect ratio
-                        .frame(height: geo.size.height * 0.70)
-                        // 2. Clip to screen width, trailing-aligned → left side crops
-                        .frame(width: geo.size.width, alignment: .trailing)
-                        .clipped()
+                    ZStack {
+                        Image("gillz_light")
+                            .resizable()
+                            .scaledToFill()
+                            .frame(height: geo.size.height * 0.70)
+                            .offset(x: imagePanX)
+                    }
+                    .frame(width: geo.size.width, height: geo.size.height * 0.70)
+                    .clipped()
                         // Subtle top vignette so status-bar area reads cleanly
                         .overlay(alignment: .top) {
                             LinearGradient(
@@ -56,30 +60,33 @@ struct WelcomeView: View {
                 Spacer()
 
                 VStack(alignment: .leading, spacing: 24) {
-                    // Branding badge
-                    HStack(spacing: 7) {
-                        Image(systemName: "bolt.fill")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(Color.appAccent)
-                        Text("MUSCLE CLUB")
-                            .font(.system(size: 12, weight: .heavy))
-                            .tracking(3)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .glassEffect(.regular.tint(.appAccent))
+//                    // Branding badge
+//                    HStack(spacing: 7) {
+//                        Image(systemName: "bolt.fill")
+//                            .font(.system(size: 12, weight: .bold))
+//                            .foregroundStyle(Color.appAccent)
+//                        Text("MUSCLE CLUB")
+//                            .font(.system(size: 12, weight: .heavy))
+//                            .tracking(3)
+//                    }
+//                    .padding(.horizontal, 16)
+//                    .padding(.vertical, 10)
+//                    .glassEffect(.regular.tint(.appAccent))
 
                     // Headline
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 12) {
                         Text("BUILD THE\nBODY YOU\nWANT.")
-                            .font(.system(size: 46, weight: .heavy))
-                            .tracking(1)
-                            .lineSpacing(3)
+                            .font(.system(size: 58, weight: .black))
+                            .italic()
+                            .tracking(-0.5)
+                            .lineSpacing(0)
+                            .foregroundStyle(.black)
 
-                        Text("Your personal strength program,\nbuilt to get you results.")
-                            .font(.system(size: 16))
-                            .foregroundStyle(.secondary)
-                            .lineSpacing(4)
+                        Text("YOUR PERSONAL STRENGTH PROGRAM,\nBUILT TO GET YOU RESULTS.")
+                            .font(.system(size: 11, weight: .semibold))
+                            .tracking(1.5)
+                            .foregroundStyle(.black.opacity(0.5))
+                            .lineSpacing(3)
                     }
 
                     // CTAs
@@ -90,7 +97,7 @@ struct WelcomeView: View {
                             }
                         } label: {
                             Text("Let's Get Started")
-                                .font(.system(size: 19, weight: .bold))
+                                .font(.system(size: 19, weight: .black))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 10)
                         }
