@@ -3,8 +3,14 @@ import StoreKit
 
 struct MuscleClubPaywallView: View {
     let onDismiss: () -> Void
+    var onboardingName: String = ""
+    var onboardingGoal: String = ""
+    var onboardingCurrentWeight: String = ""
+    var onboardingGoalWeight: String = ""
+    var goalSpeed: String = "Balanced"
 
     @Environment(StoreVM.self) private var storeVM
+    @Environment(\.colorScheme) private var colorScheme
     @State private var selectedPlan: PaywallPlan = .yearly
     @State private var isProcessing = false
     @State private var showError = false
@@ -39,12 +45,70 @@ struct MuscleClubPaywallView: View {
         return String(format: "$%.2f", monthly)
     }
 
-    private var yearlyDisplayPrice: String {
-        yearlyProduct?.displayPrice ?? "$39.99"
+    private var yearlyDisplayPrice: String { yearlyProduct?.displayPrice ?? "$39.99" }
+    private var weeklyDisplayPrice: String { weeklyProduct?.displayPrice ?? "$1.99" }
+
+    // MARK: - Personalization
+
+    private var firstName: String {
+        let first = onboardingName.components(separatedBy: " ").first ?? onboardingName
+        return first.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private var weeklyDisplayPrice: String {
-        weeklyProduct?.displayPrice ?? "$1.99"
+    private var goalTimelineWeeks: Int {
+        switch goalSpeed {
+        case "Fast": return 8
+        case "Slow": return 20
+        default: return 12
+        }
+    }
+
+    private var projectedDate: String {
+        guard let date = Calendar.current.date(byAdding: .weekOfYear, value: goalTimelineWeeks, to: Date()) else { return "" }
+        let fmt = DateFormatter()
+        fmt.dateFormat = "MMMM yyyy"
+        return fmt.string(from: date)
+    }
+
+    private var currentWeightVal: Int {
+        Int(onboardingCurrentWeight.components(separatedBy: " ").first ?? "") ?? 0
+    }
+
+    private var goalWeightVal: Int {
+        Int(onboardingGoalWeight.components(separatedBy: " ").first ?? "") ?? 0
+    }
+
+    private var goalPrediction: String {
+        switch onboardingGoal {
+        case "Lift heavier":
+            return "Your strength will improve noticeably in \(goalTimelineWeeks) weeks — by \(projectedDate)."
+        case "Build more muscle":
+            let diff = goalWeightVal - currentWeightVal
+            if diff > 0 {
+                return "You're on track to gain \(diff) kg of lean muscle by \(projectedDate)."
+            }
+            return "You'll build serious size and strength by \(projectedDate)."
+        case "Get lean and defined":
+            return "You'll be visibly leaner and defined by \(projectedDate)."
+        case "Lose weight":
+            let diff = currentWeightVal - goalWeightVal
+            if diff > 0 {
+                return "You can drop \(diff) kg, reaching \(goalWeightVal) kg by \(projectedDate)."
+            }
+            return "You'll hit your goal weight by \(projectedDate)."
+        default:
+            return "Your transformation starts the moment you begin."
+        }
+    }
+
+    private var goalIcon: String {
+        switch onboardingGoal {
+        case "Lift heavier":         return "dumbbell.fill"
+        case "Build more muscle":    return "figure.strengthtraining.traditional"
+        case "Get lean and defined": return "flame.fill"
+        case "Lose weight":          return "scalemass.fill"
+        default:                     return "star.fill"
+        }
     }
 
     // MARK: - Features
@@ -65,36 +129,27 @@ struct MuscleClubPaywallView: View {
         ZStack(alignment: .bottom) {
             AppBackground()
 
-            RadialGradient(
-                colors: [Color.appAccent.opacity(0.22), .clear],
-                center: .top,
-                startRadius: 0,
-                endRadius: 320
-            )
-            .ignoresSafeArea()
-            .allowsHitTesting(false)
+            GeometryReader { geo in
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        heroSection(geo: geo)
 
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 0) {
-                    headerSection
-                        .padding(.top, 72)
-
-                    planSection
-                        .padding(.top, 28)
+                        VStack(spacing: 16) {
+                            if !onboardingGoal.isEmpty {
+                                goalCard
+                            }
+                            planSection
+                            featuresSection
+                            finePrint.padding(.top, 4)
+                            legalRow.padding(.top, 2)
+                        }
                         .padding(.horizontal, 20)
-
-                    featuresSection
                         .padding(.top, 20)
-                        .padding(.horizontal, 20)
-
-                    finePrint
-                        .padding(.top, 18)
-
-                    legalRow
-                        .padding(.top, 8)
-                        .padding(.bottom, 180)
+                        .padding(.bottom, 160)
+                    }
                 }
             }
+            .ignoresSafeArea(edges: .top)
 
             pinnedCTABar
         }
@@ -125,44 +180,112 @@ struct MuscleClubPaywallView: View {
         onDismiss()
     }
 
-    // MARK: - Header
+    // MARK: - Hero
 
-    private var headerSection: some View {
-        VStack(spacing: 10) {
-            Text("MUSCLE CLUB")
-                .font(.system(size: 22, weight: .black)).tracking(8)
-                .foregroundColor(.white.opacity(0.9))
+    private func heroSection(geo: GeometryProxy) -> some View {
+        ZStack(alignment: .bottomLeading) {
+            Image("gillz_paywall")
+                .resizable()
+                .scaledToFill()
+                .frame(width: geo.size.width, height: geo.size.height * 0.60)
+                .clipped()
+                .overlay(alignment: .top) {
+                    LinearGradient(
+                        colors: [.black.opacity(0.35), .clear],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                    .frame(height: 140)
+                }
+                .mask {
+                    LinearGradient(
+                        stops: [
+                            .init(color: .white, location: 0),
+                            .init(color: .white, location: 0.50),
+                            .init(color: .white.opacity(0.28), location: 0.82),
+                            .init(color: .clear, location: 1.0),
+                        ],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                }
 
-            Text("PRO")
-                .font(.system(size: 12, weight: .heavy)).tracking(4)
-                .foregroundColor(.appAccent)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 6)
-                .glassEffect(.regular.tint(.appAccent), in: .rect(cornerRadius: 16))
+            VStack(alignment: .leading, spacing: 14) {
+                // Badge — always shows over the image so white text reads well here
+                HStack(spacing: 6) {
+                    Image(systemName: "bolt.fill")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(Color.appAccent)
+                    Text("MUSCLE CLUB PRO")
+                        .font(.system(size: 11, weight: .heavy))
+                        .tracking(2.5)
+                        .foregroundStyle(.white)
+                }
+                .padding(.horizontal, 14).padding(.vertical, 8)
+                .glassEffect(.regular.tint(.appAccent), in: .rect(cornerRadius: 14))
 
-            VStack(spacing: 4) {
-                Text("Unlock your full")
-                Text("training potential")
+                VStack(alignment: .leading, spacing: 4) {
+                    if !firstName.isEmpty {
+                        Text("YOUR PLAN IS READY,")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(colorScheme == .dark ? .white.opacity(0.65) : .black.opacity(0.55))
+                            .tracking(2)
+                    }
+                    Text(firstName.isEmpty ? "GET STARTED." : firstName.uppercased() + ".")
+                        .font(.system(size: 52, weight: .black))
+                        .italic()
+                        .foregroundStyle(colorScheme == .dark ? Color.white : Color.black)
+                        .tracking(-0.5)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.55)
+                }
             }
-            .font(.system(size: 32, weight: .heavy))
-            .foregroundColor(.white)
-            .multilineTextAlignment(.center)
-            .padding(.top, 6)
-
-            Text("Join athletes who train smarter, not harder.")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.top, 2)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 36)
         }
-        .padding(.horizontal, 24)
+        .frame(height: geo.size.height * 0.60)
     }
 
-    // MARK: - Plan Cards
+    // MARK: - Goal card
+
+    private var goalCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: goalIcon)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Color.appAccent)
+                    .frame(width: 28, height: 28)
+                    .glassEffect(.regular.tint(.appAccent), in: .circle)
+
+                Text("YOUR PROJECTED RESULT")
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(Color.appGold)
+                    .tracking(1.5)
+            }
+
+            Text(goalPrediction)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(.primary)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 5) {
+                Image(systemName: "figure.run")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.appAccent)
+                Text("\(goalTimelineWeeks)-week plan · \(goalSpeed) pace")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassEffect(.regular.tint(.appAccent.opacity(0.12)), in: .rect(cornerRadius: 20))
+    }
+
+    // MARK: - Plan cards
 
     private var planSection: some View {
-        GlassEffectContainer(spacing: 12) {
-            VStack(spacing: 12) {
+        GlassEffectContainer(spacing: 10) {
+            VStack(spacing: 10) {
                 planCard(
                     plan: .yearly,
                     title: "Annual",
@@ -198,61 +321,70 @@ struct MuscleClubPaywallView: View {
         return Button {
             withAnimation(.easeInOut(duration: 0.18)) { selectedPlan = plan }
         } label: {
-            HStack(spacing: 14) {
-                ZStack {
-                    Circle()
-                        .stroke(.white.opacity(selected ? 0 : 0.3), lineWidth: 2)
-                        .frame(width: 22, height: 22)
-                    if selected {
-                        Circle().fill(Color.appAccent).frame(width: 22, height: 22)
-                        Circle().fill(.white).frame(width: 9, height: 9)
+            VStack(spacing: 0) {
+                if let badge {
+                    HStack {
+                        Spacer()
+                        Text(badge)
+                            .font(.system(size: 10, weight: .heavy))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Capsule().fill(Color.appAccent))
+                    }
+                    .padding(.horizontal, 18)
+                    .padding(.top, 12)
+                    .padding(.bottom, 6)
+                }
+
+                HStack(spacing: 14) {
+                    // Radio indicator
+                    ZStack {
+                        Circle()
+                            .stroke(.primary.opacity(selected ? 0 : 0.25), lineWidth: 2)
+                            .frame(width: 22, height: 22)
+                        if selected {
+                            Circle().fill(Color.appAccent).frame(width: 22, height: 22)
+                            Circle().fill(.white).frame(width: 9, height: 9)
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(title)
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(.primary)
+                        Text(detail)
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    VStack(alignment: .trailing, spacing: 1) {
+                        Text(priceMain)
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(.primary)
+                        Text(priceSub)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
                     }
                 }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.white)
-                    Text(detail)
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.62))
-                }
-
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 1) {
-                    Text(priceMain)
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.white)
-                    Text(priceSub)
-                        .font(.system(size: 11))
-                        .foregroundColor(.white.opacity(0.55))
-                }
+                .padding(.horizontal, 18)
+                .padding(.vertical, 16)
+                .padding(.bottom, badge != nil ? 4 : 0)
             }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 18)
-            .glassEffect(selected ? .regular.tint(.appAccent) : .regular, in: .rect(cornerRadius: 18))
-            .glassEffectID(plan == .yearly ? "plan-yearly" : "plan-weekly", in: planNS)
-            .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(
-                        selected ? Color.appAccent.opacity(0.7) : .white.opacity(0.10),
-                        lineWidth: selected ? 1.5 : 1
-                    )
-            )
-            .overlay(alignment: .topTrailing) {
-                if let badge {
-                    Text(badge)
-                        .font(.system(size: 11, weight: .heavy))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(Capsule().fill(Color.appAccent))
-                        .offset(x: -14, y: -10)
-                }
-            }
+            .frame(maxWidth: .infinity)
         }
         .buttonStyle(.plain)
+        .glassEffect(selected ? .regular.tint(.appAccent) : .regular, in: .rect(cornerRadius: 18))
+        .glassEffectID(plan == .yearly ? "plan-yearly" : "plan-weekly", in: planNS)
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(
+                    selected ? Color.appAccent.opacity(0.7) : .primary.opacity(0.10),
+                    lineWidth: selected ? 1.5 : 1
+                )
+        )
         .animation(.easeInOut(duration: 0.18), value: selected)
     }
 
@@ -261,33 +393,33 @@ struct MuscleClubPaywallView: View {
     private var featuresSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Everything included")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundColor(.appGold)
-                .padding(.bottom, 16)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(Color.appGold)
+                .padding(.bottom, 14)
 
             ForEach(Array(features.enumerated()), id: \.offset) { i, feature in
                 HStack(spacing: 14) {
                     Image(systemName: feature.icon)
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.appAccent)
+                        .foregroundStyle(Color.appAccent)
                         .frame(width: 28, height: 28)
                         .glassEffect(.regular.tint(.appAccent), in: .circle)
 
                     Text(feature.text)
                         .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(.white.opacity(0.92))
+                        .foregroundStyle(.primary)
 
                     Spacer()
 
                     Image(systemName: "checkmark")
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(.appAccent)
+                        .foregroundStyle(Color.appAccent)
                 }
                 .padding(.vertical, 12)
 
                 if i < features.count - 1 {
                     Rectangle()
-                        .fill(.white.opacity(0.08))
+                        .fill(.primary.opacity(0.08))
                         .frame(height: 1)
                 }
             }
@@ -300,15 +432,14 @@ struct MuscleClubPaywallView: View {
 
     private var pinnedCTABar: some View {
         VStack(spacing: 10) {
-            ctaButton
-                .padding(.horizontal, 20)
+            ctaButton.padding(.horizontal, 20)
 
             if yearlyHasTrial && selectedPlan == .yearly {
                 HStack(spacing: 6) {
                     Image(systemName: "checkmark.seal.fill")
-                        .foregroundColor(.appAccent)
+                        .foregroundStyle(Color.appAccent)
                     Text("No payment due today")
-                        .foregroundColor(.white)
+                        .foregroundStyle(.primary)
                 }
                 .font(.system(size: 14, weight: .semibold))
             }
@@ -319,8 +450,7 @@ struct MuscleClubPaywallView: View {
         .background(
             LinearGradient(
                 colors: [Color.appBg.opacity(0), Color.appBg.opacity(0.95), Color.appBg],
-                startPoint: .top,
-                endPoint: .bottom
+                startPoint: .top, endPoint: .bottom
             )
             .ignoresSafeArea()
         )
@@ -336,8 +466,6 @@ struct MuscleClubPaywallView: View {
                 do {
                     let transaction = try await storeVM.purchase(product)
                     isProcessing = false
-                    // complete() if purchase returned a transaction directly,
-                    // onChange handles the case where hasActiveSubscription fires first.
                     if transaction != nil { complete() }
                 } catch {
                     isProcessing = false
@@ -350,9 +478,10 @@ struct MuscleClubPaywallView: View {
                 if isBusy {
                     ProgressView().tint(.white)
                 } else {
+                    // White text on the crimson button is readable in both modes
                     Text(selectedPlan == .yearly && yearlyHasTrial ? "Start free trial" : "Start training")
                         .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                 }
             }
             .frame(maxWidth: .infinity)
@@ -367,12 +496,10 @@ struct MuscleClubPaywallView: View {
 
     private var finePrint: some View {
         HStack(spacing: 5) {
-            Image(systemName: "lock.shield")
-                .font(.caption)
-            Text("Secure payment · Cancel anytime")
-                .font(.caption)
+            Image(systemName: "lock.shield").font(.caption)
+            Text("Secure payment · Cancel anytime").font(.caption)
         }
-        .foregroundColor(.secondary)
+        .foregroundStyle(.secondary)
     }
 
     private var legalRow: some View {
@@ -382,7 +509,7 @@ struct MuscleClubPaywallView: View {
             } label: {
                 Text("Restore purchases")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .underline()
             }
             .buttonStyle(.plain)
@@ -392,7 +519,7 @@ struct MuscleClubPaywallView: View {
             } label: {
                 Text("Redeem code")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(.secondary)
                     .underline()
             }
             .buttonStyle(.plain)
@@ -400,7 +527,28 @@ struct MuscleClubPaywallView: View {
     }
 }
 
-#Preview {
-    MuscleClubPaywallView(onDismiss: {})
-        .environment(StoreVM())
+#Preview("Dark — with onboarding data") {
+    MuscleClubPaywallView(
+        onDismiss: {},
+        onboardingName: "Gísli",
+        onboardingGoal: "Build more muscle",
+        onboardingCurrentWeight: "80 kg",
+        onboardingGoalWeight: "88 kg",
+        goalSpeed: "Balanced"
+    )
+    .environment(StoreVM())
+    .preferredColorScheme(.dark)
+}
+
+#Preview("Light — with onboarding data") {
+    MuscleClubPaywallView(
+        onDismiss: {},
+        onboardingName: "Gísli",
+        onboardingGoal: "Build more muscle",
+        onboardingCurrentWeight: "80 kg",
+        onboardingGoalWeight: "88 kg",
+        goalSpeed: "Balanced"
+    )
+    .environment(StoreVM())
+    .preferredColorScheme(.light)
 }
