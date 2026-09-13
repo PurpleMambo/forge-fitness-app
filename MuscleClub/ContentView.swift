@@ -19,8 +19,9 @@ import GoogleSignIn
     }
 }
 
-// DEBUG — flip to true to land directly on RankView on device. Set back to false before shipping.
-private let debugShowRankView = false
+// DEBUG — flip to true to land directly on a specific screen. Set back to false before shipping.
+private let debugShowRankView   = false
+private let debugShowPaywall    = true   // ← flip to false when done testing
 
 struct RootView: View {
     @Environment(AppState.self) var appState
@@ -28,7 +29,16 @@ struct RootView: View {
 
     var body: some View {
         Group {
-            if debugShowRankView {
+            if debugShowPaywall {
+                MuscleClubPaywallView(
+                    onDismiss: {},
+                    onboardingName: "Gísli",
+                    onboardingGoal: "Build more muscle",
+                    onboardingCurrentWeight: "80 kg",
+                    onboardingGoalWeight: "88 kg",
+                    goalSpeed: "Balanced"
+                )
+            } else if debugShowRankView {
                 RankView()
             } else if !appState.sessionCheckComplete {
                 AppBackground()

@@ -5,6 +5,7 @@ import DotLottie
 /// Press-and-hold commitment screen. The screen bleeds crimson as the user
 /// charges the ring; at full charge a celebration plays, then the paywall appears.
 struct NewOnboardingFlow_CommitStepView: View {
+    let model: NewOnboardingFlowViewModel
     let onCommitted: () -> Void
 
     @State private var holdProgress: Double = 0
@@ -39,7 +40,14 @@ struct NewOnboardingFlow_CommitStepView: View {
         .ignoresSafeArea()
         .onDisappear { holdTask?.cancel() }
         .fullScreenCover(isPresented: $showPaywall) {
-            MuscleClubPaywallView(onDismiss: { onCommitted() })
+            MuscleClubPaywallView(
+                onDismiss: { onCommitted() },
+                onboardingName: model.answers.count > 2 ? model.answers[2] : "",
+                onboardingGoal: model.answers.first ?? "",
+                onboardingCurrentWeight: model.answers.count > 4 ? model.answers[4] : "",
+                onboardingGoalWeight: model.answers.count > 6 ? model.answers[6] : "",
+                goalSpeed: model.goalSpeedAnswer
+            )
         }
     }
 

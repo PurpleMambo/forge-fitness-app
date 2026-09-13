@@ -17,7 +17,6 @@ struct MuscleClubPaywallView: View {
     @State private var errorMessage = ""
     @State private var didComplete = false
     @State private var showOfferCodeRedemption = false
-    @Namespace private var planNS
 
     enum PaywallPlan { case yearly, weekly }
 
@@ -284,28 +283,28 @@ struct MuscleClubPaywallView: View {
     // MARK: - Plan cards
 
     private var planSection: some View {
-        GlassEffectContainer(spacing: 10) {
-            VStack(spacing: 10) {
-                planCard(
-                    plan: .yearly,
-                    title: "Annual",
-                    badge: yearlyHasTrial ? "3 DAYS FREE" : "BEST VALUE",
-                    priceMain: yearlyMonthlyEquivalent,
-                    priceSub: "per month",
-                    detail: yearlyHasTrial
-                        ? "Free for 3 days, then \(yearlyDisplayPrice)/yr"
-                        : "\(yearlyDisplayPrice) billed yearly"
-                )
+        VStack(spacing: 10) {
+            // Extra top padding so the floating badge has room above the card
+            planCard(
+                plan: .yearly,
+                title: "Annual",
+                badge: yearlyHasTrial ? "3 DAYS FREE" : "BEST VALUE",
+                priceMain: yearlyMonthlyEquivalent,
+                priceSub: "per month",
+                detail: yearlyHasTrial
+                    ? "Free for 3 days, then \(yearlyDisplayPrice)/yr"
+                    : "\(yearlyDisplayPrice) billed yearly"
+            )
+            .padding(.top, 10)
 
-                planCard(
-                    plan: .weekly,
-                    title: "Weekly",
-                    badge: nil,
-                    priceMain: weeklyDisplayPrice,
-                    priceSub: "per week",
-                    detail: "No commitment. Cancel anytime."
-                )
-            }
+            planCard(
+                plan: .weekly,
+                title: "Weekly",
+                badge: nil,
+                priceMain: weeklyDisplayPrice,
+                priceSub: "per week",
+                detail: "No commitment. Cancel anytime."
+            )
         }
     }
 
@@ -321,70 +320,83 @@ struct MuscleClubPaywallView: View {
         return Button {
             withAnimation(.easeInOut(duration: 0.18)) { selectedPlan = plan }
         } label: {
-            VStack(spacing: 0) {
-                if let badge {
-                    HStack {
-                        Spacer()
-                        Text(badge)
-                            .font(.system(size: 10, weight: .heavy))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(Capsule().fill(Color.appAccent))
-                    }
-                    .padding(.horizontal, 18)
-                    .padding(.top, 12)
-                    .padding(.bottom, 6)
-                }
-
-                HStack(spacing: 14) {
-                    // Radio indicator
-                    ZStack {
-                        Circle()
-                            .stroke(.primary.opacity(selected ? 0 : 0.25), lineWidth: 2)
-                            .frame(width: 22, height: 22)
-                        if selected {
-                            Circle().fill(Color.appAccent).frame(width: 22, height: 22)
-                            Circle().fill(.white).frame(width: 9, height: 9)
-                        }
-                    }
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(title)
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundStyle(.primary)
-                        Text(detail)
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Spacer()
-
-                    VStack(alignment: .trailing, spacing: 1) {
-                        Text(priceMain)
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundStyle(.primary)
-                        Text(priceSub)
-                            .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
+            HStack(spacing: 14) {
+                // Radio indicator — accent fill + white dot when selected
+                ZStack {
+                    Circle()
+                        .stroke(.primary.opacity(selected ? 0 : 0.25), lineWidth: 2)
+                        .frame(width: 22, height: 22)
+                    if selected {
+                        Circle().fill(Color.appAccent).frame(width: 22, height: 22)
+                        Circle().fill(.white).frame(width: 9, height: 9)
                     }
                 }
-                .padding(.horizontal, 18)
-                .padding(.vertical, 16)
-                .padding(.bottom, badge != nil ? 4 : 0)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(selected ? Color.white : Color.primary)
+                    Text(detail)
+                        .font(.system(size: 12))
+                        .foregroundStyle(selected ? Color.white.opacity(0.75) : Color.secondary)
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text(priceMain)
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(selected ? Color.white : Color.primary)
+                    Text(priceSub)
+                        .font(.system(size: 11))
+                        .foregroundStyle(selected ? Color.white.opacity(0.70) : Color.secondary)
+                }
             }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 18)
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.plain)
-        .glassEffect(selected ? .regular.tint(.appAccent) : .regular, in: .rect(cornerRadius: 18))
-        .glassEffectID(plan == .yearly ? "plan-yearly" : "plan-weekly", in: planNS)
+        // Unselected: subtle white-tinted glass so the card reads on any background.
+        // Selected: brand-accent tint for clear visual weight.
+        .glassEffect(
+            selected
+                ? .regular.tint(.appAccent)
+                : .regular.tint(colorScheme == .dark ? .white.opacity(0.08) : .clear),
+            in: .rect(cornerRadius: 18)
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(
-                    selected ? Color.appAccent.opacity(0.7) : .primary.opacity(0.10),
-                    lineWidth: selected ? 1.5 : 1
+                    selected ? Color.appAccent.opacity(0.85) : .primary.opacity(0.12),
+                    lineWidth: selected ? 2 : 1
                 )
         )
+        // Badge floats above the card's top-trailing corner — not clipped by any container
+        .overlay(alignment: .topTrailing) {
+            if let badge {
+                Text(badge)
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(
+                        Capsule().fill(
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 1.00, green: 0.88, blue: 0.38),
+                                    Color(red: 0.90, green: 0.62, blue: 0.04)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                    )
+                    .shadow(color: .black.opacity(0.30), radius: 2, x: 0, y: 2)
+                    .shadow(color: Color(red: 0.90, green: 0.62, blue: 0.04).opacity(0.45), radius: 5, x: 0, y: 3)
+                    .offset(x: -14, y: -10)
+            }
+        }
         .animation(.easeInOut(duration: 0.18), value: selected)
     }
 

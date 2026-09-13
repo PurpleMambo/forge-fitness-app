@@ -335,7 +335,7 @@ struct NewOnboardingFlowView: View {
             NewOnboardingFlow_FeatureShowcaseScreen(model: model)
                 .transition(.opacity)
         case .commit:
-            NewOnboardingFlow_CommitStepView { appState.onboardingComplete = true }
+            NewOnboardingFlow_CommitStepView(model: model) { appState.onboardingComplete = true }
                 .transition(.opacity)
         }
     }
