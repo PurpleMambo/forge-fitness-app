@@ -145,6 +145,8 @@ struct DashboardView: View {
     @State private var setupExercise: Exercise? = nil
     @State private var showSwitchSheet = false
     @State private var showAccount = false
+    @State private var showAddExercise = false
+    @State private var userAddedExercises: [Exercise] = []
     @State private var toolbarUserName: String = ""
 
     private static let completedGreen = Color(red: 0.3, green: 0.85, blue: 0.45)
@@ -298,6 +300,14 @@ struct DashboardView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
                 .presentationBackground(Color(red: 0.08, green: 0.05, blue: 0.12))
+        }
+        .sheet(isPresented: $showAddExercise) {
+            NavigationStack {
+                AddExerciseView { newExercises in
+                    userAddedExercises.append(contentsOf: newExercises)
+                }
+            }
+            .presentationDragIndicator(.visible)
         }
         .task { await loadTodayExercises() }
         .task { await loadToolbarUser() }
@@ -479,8 +489,9 @@ struct DashboardView: View {
     func exerciseSection(_ w: WorkoutDay) -> some View {
         VStack(spacing: 10) {
             ForEach(w.exercises) { ex in exerciseRow(ex) }
+            ForEach(userAddedExercises) { ex in exerciseRow(ex) }
 
-            Button {  } label: {
+            Button { showAddExercise = true } label: {
                 HStack(spacing: 10) {
                     Image(systemName: "plus").font(.system(size: 15, weight: .bold)).foregroundColor(.appAccent)
                     Text("Add Exercise").font(.system(size: 15, weight: .semibold)).foregroundColor(.appAccent)
