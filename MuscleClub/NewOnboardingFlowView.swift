@@ -16,13 +16,13 @@ struct NewOnboardingStep: Identifiable {
     let input: Input
 }
 
-let worldClassIcelandLocations: [String] = [
-    "Smáralind", "Laugar", "Mjódd", "Suðurlandsbraut",
-    "Grafarvogur", "Breiðholt", "Garðabær", "Hafnarfjörður",
-    "Mosfellsbær", "Álftanes", "Keflavík", "Akureyri",
-    "Selfoss", "Borgarnes", "Ísafjörður", "Egilsstaðir",
-    "Sauðárkrókur", "Hvolsvöllur", "Höfn í Hornafirði", "Vík"
-]
+// let worldClassIcelandLocations: [String] = [
+//     "Smáralind", "Laugar", "Mjódd", "Suðurlandsbraut",
+//     "Grafarvogur", "Breiðholt", "Garðabær", "Hafnarfjörður",
+//     "Mosfellsbær", "Álftanes", "Keflavík", "Akureyri",
+//     "Selfoss", "Borgarnes", "Ísafjörður", "Egilsstaðir",
+//     "Sauðárkrókur", "Hvolsvöllur", "Höfn í Hornafirði", "Vík"
+// ]
 
 let newOnboardingSteps: [NewOnboardingStep] = [
     .init(id: 0, icon: "target",
@@ -74,19 +74,20 @@ let newOnboardingSteps: [NewOnboardingStep] = [
           title: "What type of exercise do you enjoy most?",
           subtitle: "We'll lean into what you love.",
           input: .options(["Weight training", "Cardio", "Both equally", "Group classes / team sports"])),
-    .init(id: 11, icon: "building.2.fill",
-          title: "Where do you primarily plan to train?",
-          subtitle: "Your plan will be built around your setup.",
-          input: .options(["At a large commercial gym", "At a small gym", "In a garage gym",
-                           "At home with limited equipment", "I don't have any equipment"])),
-    .init(id: 12, icon: "mappin.circle.fill",
-          title: "Which gym do you train at?",
-          subtitle: "Select your main gym.",
-          input: .options(["World Class", "SportHúsið", "Katla Fitnes", "Other"])),
-    .init(id: 13, icon: "map.fill",
-          title: "Which World Class location?",
-          subtitle: "Pick the one you visit most often.",
-          input: .stringPicker(worldClassIcelandLocations)),
+    // Replaced by GymSizeStep + EquipmentReviewStep custom screens
+    // .init(id: 11, icon: "building.2.fill",
+    //       title: "Where do you primarily plan to train?",
+    //       subtitle: "Your plan will be built around your setup.",
+    //       input: .options(["At a large commercial gym", "At a small gym", "In a garage gym",
+    //                        "At home with limited equipment", "I don't have any equipment"])),
+    // .init(id: 12, icon: "mappin.circle.fill",
+    //       title: "Which gym do you train at?",
+    //       subtitle: "Select your main gym.",
+    //       input: .options(["World Class", "SportHúsið", "Katla Fitnes", "Other"])),
+    // .init(id: 13, icon: "map.fill",
+    //       title: "Which World Class location?",
+    //       subtitle: "Pick the one you visit most often.",
+    //       input: .stringPicker(worldClassIcelandLocations)),
     .init(id: 14, icon: "repeat",
           title: "How many days a week can you train?",
           subtitle: "Be realistic — consistency beats intensity.",
@@ -144,6 +145,8 @@ final class NewOnboardingFlowViewModel {
         case goalSpeed
         case sleep
         case supplements
+        case gymSize
+        case equipmentReview
         case calculating
         case plan
         case socialProof
@@ -155,18 +158,19 @@ final class NewOnboardingFlowViewModel {
     var phase: Phase = .questions(0)
     var isGoingBack = false
     var answers: [String] = []
-    var gymAnswer: String = ""
+    var gymSizeAnswer: String = ""
+    var selectedEquipment: Set<String> = []
     var goalSpeedAnswer: String = "Balanced"
     var sleepDurationAnswer: String = ""
     var sleepGoalsAnswer: Set<String> = []
     var supplementsAnswer: String = ""
 
     // Look up by step ID so the indices stay correct if step order ever changes.
-    private var gymStepArrIdx: Int {
-        newOnboardingSteps.firstIndex(where: { $0.id == 12 }) ?? 12
+    private var exerciseTypeStepArrIdx: Int {
+        newOnboardingSteps.firstIndex(where: { $0.id == 10 }) ?? 11
     }
-    private var wcLocStepArrIdx: Int {
-        newOnboardingSteps.firstIndex(where: { $0.id == 13 }) ?? 13
+    private var firstPostGymStepArrIdx: Int {
+        newOnboardingSteps.firstIndex(where: { $0.id == 14 }) ?? 12
     }
     private var goalWeightStepArrIdx: Int {
         newOnboardingSteps.firstIndex(where: { $0.id == 5 }) ?? 5
@@ -202,19 +206,16 @@ final class NewOnboardingFlowViewModel {
     func pick(_ answer: String) {
         isGoingBack = false
         guard case let .questions(i) = phase else { return }
-        if i == gymStepArrIdx { gymAnswer = answer }
         answers.append(answer)
         withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
-            var next = i + 1
-            // Skip the World Class location step if the user picked a different gym.
-            if i == gymStepArrIdx && answer != "World Class" {
-                next = wcLocStepArrIdx + 1
-            }
-            if i == goalWeightStepArrIdx {
+            if i == exerciseTypeStepArrIdx {
+                phase = .gymSize
+            } else if i == goalWeightStepArrIdx {
                 phase = .goalSpeed
             } else if i == injuriesStepArrIdx {
                 phase = .sleep
             } else {
+                let next = i + 1
                 phase = next < newOnboardingSteps.count ? .questions(next) : .calculating
             }
         }
@@ -230,6 +231,8 @@ final class NewOnboardingFlowViewModel {
             case .goalSpeed:        phase = .questions(goalWeightStepArrIdx + 1)
             case .sleep:            phase = .supplements
             case .supplements:      phase = .questions(supplementsStepArrIdx + 1)
+            case .gymSize:          phase = .equipmentReview
+            case .equipmentReview:  phase = .questions(firstPostGymStepArrIdx)
             case .calculating:      phase = .plan
             case .plan:             phase = .socialProof
             case .socialProof:      phase = .signUp
@@ -249,14 +252,40 @@ final class NewOnboardingFlowViewModel {
         }
     }
 
+    func pickGymSize(_ size: String) {
+        isGoingBack = false
+        gymSizeAnswer = size
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
+            phase = .equipmentReview
+        }
+    }
+
+    func skipGymStep() {
+        isGoingBack = false
+        gymSizeAnswer = ""
+        selectedEquipment = []
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
+            phase = .questions(firstPostGymStepArrIdx)
+        }
+    }
+
+    func confirmEquipment(_ equipment: Set<String>) {
+        isGoingBack = false
+        selectedEquipment = equipment
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
+            phase = .questions(firstPostGymStepArrIdx)
+        }
+    }
+
     func goBack() {
         isGoingBack = true
         withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
             switch phase {
             case .questions(let i):
                 guard i > 0 else { return }
-                // If the previous thing in the flow was a custom screen, go back to it (no pop).
-                if i == goalWeightStepArrIdx + 1 {
+                if i == firstPostGymStepArrIdx {
+                    phase = .equipmentReview
+                } else if i == goalWeightStepArrIdx + 1 {
                     phase = .goalSpeed
                 } else if i == injuriesStepArrIdx + 1 {
                     phase = .sleep
@@ -265,23 +294,22 @@ final class NewOnboardingFlowViewModel {
                     phase = .supplements
                 } else {
                     if !answers.isEmpty { answers.removeLast() }
-                    var prev = i - 1
-                    // Skip back over the World Class location step if gym isn't World Class.
-                    if prev == wcLocStepArrIdx && gymAnswer != "World Class" {
-                        prev = gymStepArrIdx
-                    }
+                    let prev = i - 1
                     phase = .questions(prev)
                 }
             case .goalSpeed:
-                // Pop the goal-weight answer so the user can re-answer it.
                 if !answers.isEmpty { answers.removeLast() }
                 phase = .questions(goalWeightStepArrIdx)
             case .sleep:
-                // Pop the injuries answer so the user can re-answer it.
                 if !answers.isEmpty { answers.removeLast() }
                 phase = .questions(injuriesStepArrIdx)
             case .supplements:
                 phase = .sleep
+            case .gymSize:
+                if !answers.isEmpty { answers.removeLast() }
+                phase = .questions(exerciseTypeStepArrIdx)
+            case .equipmentReview:
+                phase = .gymSize
             default:
                 break
             }
@@ -318,6 +346,12 @@ struct NewOnboardingFlowView: View {
                 .transition(slideTransition)
         case .supplements:
             NewOnboardingFlow_SupplementsStep(model: model)
+                .transition(slideTransition)
+        case .gymSize:
+            NewOnboardingFlow_GymSizeStep(model: model)
+                .transition(slideTransition)
+        case .equipmentReview:
+            NewOnboardingFlow_EquipmentReviewStep(model: model)
                 .transition(slideTransition)
         case .calculating:
             NewOnboardingFlow_CalculatingScreen(model: model)

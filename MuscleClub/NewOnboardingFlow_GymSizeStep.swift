@@ -169,6 +169,7 @@ struct NewOnboardingFlow_GymSizeStep: View {
 
 // MARK: - Shared nav bar (used by both gym equipment screens)
 
+@ViewBuilder
 func gymEquipmentNavBar(onBack: @escaping () -> Void, onSkip: @escaping () -> Void) -> some View {
     HStack {
         Button(action: onBack) {

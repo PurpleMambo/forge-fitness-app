@@ -21,7 +21,7 @@ import GoogleSignIn
 
 // DEBUG — flip to true to land directly on a specific screen. Set back to false before shipping.
 private let debugShowRankView   = false
-private let debugShowPaywall    = true   // ← flip to false when done testing
+private let debugShowPaywall    = false  // ← flip to false when done testing
 
 struct RootView: View {
     @Environment(AppState.self) var appState

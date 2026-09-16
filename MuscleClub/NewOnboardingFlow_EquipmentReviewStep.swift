@@ -8,6 +8,11 @@ struct EquipmentItem: Identifiable {
     let name: String
     let sfSymbol: String
     let detail: String
+
+    var imageURL: URL? {
+        let ext = id == "parallettes" ? "jpg" : "png"
+        return URL(string: "https://neomyrexkfgrsrcqvnsb.supabase.co/storage/v1/object/public/equipment-images/equipment_renamed/\(id).\(ext)")
+    }
 }
 
 struct EquipmentCategory: Identifiable {
@@ -324,12 +329,23 @@ struct NewOnboardingFlow_EquipmentReviewStep: View {
         } label: {
             HStack(spacing: 12) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 10)
+                    RoundedRectangle(cornerRadius: 12)
                         .fill(Color.white.opacity(isChecked ? 0.15 : 0.07))
-                        .frame(width: 44, height: 44)
-                    Image(systemName: item.sfSymbol)
-                        .font(.system(size: 17))
-                        .foregroundStyle(isChecked ? Color.appAccent : .secondary)
+                        .frame(width: 64, height: 64)
+
+                    AsyncImage(url: item.imageURL) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 44, height: 44)
+                        default:
+                            Image(systemName: item.sfSymbol)
+                                .font(.system(size: 22))
+                                .foregroundStyle(isChecked ? Color.appAccent : .secondary)
+                        }
+                    }
                 }
                 .animation(.snappy(duration: 0.18), value: isChecked)
 
