@@ -32,7 +32,7 @@ struct RootView: View {
         Group {
             if debugShowDashboard {
                 MainTabView()
-                    .task { await programService.loadAll() }
+                    .task { await programService.loadForDebug() }
             } else if debugShowPaywall {
                 MuscleClubPaywallView(
                     onDismiss: {},

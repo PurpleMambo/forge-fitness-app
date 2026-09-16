@@ -509,16 +509,22 @@ struct DashboardView: View {
         let loggedSets = appState.workoutStore.totalSetsLogged(for: ex)
         return Button { setupExercise = ex } label: {
             HStack(spacing: 14) {
-                Image(systemName: completed ? "checkmark.circle.fill" : ex.sfSymbol)
-                    .font(.system(size: 22))
-                    .foregroundColor(completed ? Self.completedGreen : (ex.isFocus ? .appAccent : .secondary))
-                    .frame(width: 58, height: 58)
-                    .glassEffect(
-                        completed
-                            ? .regular.tint(Self.completedGreen)
-                            : (ex.isFocus ? .regular.tint(.appAccent) : .regular),
-                        in: .rect(cornerRadius: 14)
+                ZStack {
+                    ExerciseThumbnailView(
+                        videoUrl: ex.videoResource,
+                        fallbackSymbol: ex.sfSymbol,
+                        size: 58,
+                        cornerRadius: 14
                     )
+                    if completed {
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(Self.completedGreen.opacity(0.55))
+                            .frame(width: 58, height: 58)
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                }
 
                 VStack(alignment: .leading, spacing: 4) {
                     if completed {

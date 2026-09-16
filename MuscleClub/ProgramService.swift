@@ -34,6 +34,27 @@ final class ProgramService {
 
     // MARK: - Bootstrap
 
+    func loadForDebug() async {
+        let programId = UUID(uuidString: "a0000000-0000-0000-0000-000000000001")!
+        isLoading = true
+        do {
+            async let t = fetchTemplates(programId: programId)
+            async let m = fetchMilestones(programId: programId)
+            templates  = try await t
+            milestones = try await m
+            userProgram = RemoteUserProgram(
+                id: UUID(),
+                userId: UUID(),
+                programId: programId,
+                startedAt: Date(),
+                currentWeek: 1
+            )
+        } catch {
+            self.error = error.localizedDescription
+        }
+        isLoading = false
+    }
+
     func loadAll() async {
         isLoading = true
         error = nil
