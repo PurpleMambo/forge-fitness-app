@@ -21,7 +21,8 @@ import GoogleSignIn
 
 // DEBUG — flip to true to land directly on a specific screen. Set back to false before shipping.
 private let debugShowRankView   = false
-private let debugShowPaywall    = false  // ← flip to false when done testing
+private let debugShowPaywall    = false
+private let debugShowDashboard  = true   // ← flip to false before shipping
 
 struct RootView: View {
     @Environment(AppState.self) var appState
@@ -29,7 +30,10 @@ struct RootView: View {
 
     var body: some View {
         Group {
-            if debugShowPaywall {
+            if debugShowDashboard {
+                MainTabView()
+                    .task { await programService.loadAll() }
+            } else if debugShowPaywall {
                 MuscleClubPaywallView(
                     onDismiss: {},
                     onboardingName: "Gísli",

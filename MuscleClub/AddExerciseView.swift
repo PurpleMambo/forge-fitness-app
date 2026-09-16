@@ -1,5 +1,6 @@
 import SwiftUI
 import Supabase
+import AVFoundation
 
 // MARK: - Add Exercise Picker Sheet
 struct AddExerciseView: View {
@@ -252,14 +253,7 @@ struct AddExerciseView: View {
             }
         } label: {
             HStack(spacing: 14) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(.secondary.opacity(0.12))
-                        .frame(width: 52, height: 52)
-                    Image(systemName: ex.sfSymbol)
-                        .font(.system(size: 20))
-                        .foregroundStyle(.secondary)
-                }
+                ExerciseThumbnailView(videoUrl: ex.videoUrl, fallbackSymbol: ex.sfSymbol)
                 Text(ex.nameEn)
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(Color.primary)
@@ -273,6 +267,7 @@ struct AddExerciseView: View {
         }
         .buttonStyle(.plain)
     }
+
 
     private func muscleGroupRow(name: String, count: Int) -> some View {
         Button {
@@ -374,5 +369,58 @@ struct AddExerciseView: View {
             // Falls through with empty list; user still sees UI
         }
         isLoading = false
+    }
+}
+
+// MARK: - Video Thumbnail View
+// Generates a still frame from the first second of a remote video using AVAssetImageGenerator.
+// Only downloads the initial portion of the video, not the full file.
+private struct ExerciseThumbnailView: View {
+    let videoUrl: String?
+    let fallbackSymbol: String
+
+    @State private var image: UIImage? = nil
+    @State private var isLoading = false
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 8)
+                .fill(.secondary.opacity(0.12))
+
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 52, height: 52)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            } else if isLoading {
+                ProgressView().scaleEffect(0.7)
+            } else {
+                Image(systemName: fallbackSymbol)
+                    .font(.system(size: 20))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(width: 52, height: 52)
+        .task {
+            guard image == nil, let urlString = videoUrl, !urlString.isEmpty else { return }
+            isLoading = true
+            image = await makeThumbnail(from: urlString)
+            isLoading = false
+        }
+    }
+
+    private func makeThumbnail(from urlString: String) async -> UIImage? {
+        guard let url = URL(string: urlString) else { return nil }
+        let asset = AVURLAsset(url: url)
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        generator.maximumSize = CGSize(width: 104, height: 104)
+        do {
+            let (cgImage, _) = try await generator.image(at: .zero)
+            return UIImage(cgImage: cgImage)
+        } catch {
+            return nil
+        }
     }
 }
