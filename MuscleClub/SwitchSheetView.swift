@@ -64,7 +64,8 @@ struct SwitchSheetView: View {
         let weekday = cal.component(.weekday, from: appState.selectedDate)
         let dayName = weekdayName(from: weekday)
         let week = programService.userProgram?.currentWeek ?? 1
-        return programService.templates.first { $0.dayOfWeek == dayName && $0.weekNumber == week }?.id
+        return appState.weekTemplateRemap[dayName]
+            ?? programService.templates.first { $0.dayOfWeek == dayName && $0.weekNumber == week }?.id
     }
 
     // MARK: - Training section
@@ -188,17 +189,34 @@ struct SwitchSheetView: View {
     // MARK: - Switching logic
 
     private func switchTo(_ template: RemoteWorkoutTemplate) {
-        let target = weekdayInt(for: template.dayOfWeek)
-        let today = Date()
-        for offset in 0...6 {
-            guard let d = cal.date(byAdding: .day, value: offset, to: today) else { continue }
-            if cal.component(.weekday, from: d) == target {
-                withAnimation(.spring(response: 0.4)) {
-                    appState.selectedDate = d
-                }
+        let weekday = cal.component(.weekday, from: appState.selectedDate)
+        let todayName = weekdayName(from: weekday)
+        let week = programService.userProgram?.currentWeek ?? 1
+
+        // What is currently showing on today's slot (may already be swapped)?
+        let todayEffectiveId = appState.weekTemplateRemap[todayName]
+            ?? programService.templates.first { $0.dayOfWeek == todayName && $0.weekNumber == week }?.id
+
+        // Already showing the tapped template — nothing to do
+        guard todayEffectiveId != template.id else { dismiss(); return }
+
+        // Find which day currently holds the target template (account for prior swaps)
+        let allWeekTemplates = programService.templates.filter { $0.weekNumber == week }
+        var targetCurrentDay = template.dayOfWeek
+        for t in allWeekTemplates {
+            let effectiveId = appState.weekTemplateRemap[t.dayOfWeek] ?? t.id
+            if effectiveId == template.id {
+                targetCurrentDay = t.dayOfWeek
                 break
             }
         }
+
+        // Two-way swap: put chosen template on today, send displaced template to the other slot
+        appState.weekTemplateRemap[todayName] = template.id
+        if let displaced = todayEffectiveId {
+            appState.weekTemplateRemap[targetCurrentDay] = displaced
+        }
+
         dismiss()
     }
 

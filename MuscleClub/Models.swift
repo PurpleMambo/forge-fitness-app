@@ -109,6 +109,8 @@ class AppState {
     var isAuthenticated = false
     var sessionCheckComplete = false
     var remoteWorkout: WorkoutDay? = nil
+    // Local swap map: dayOfWeek → overriding templateId (session-only, cleared on program/week change)
+    var weekTemplateRemap: [String: UUID] = [:]
 
     @MainActor
     func checkSession() async {

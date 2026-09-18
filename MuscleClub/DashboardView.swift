@@ -299,7 +299,7 @@ struct DashboardView: View {
             SwitchSheetView()
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
-                .presentationBackground(Color(red: 0.08, green: 0.05, blue: 0.12))
+                .presentationBackground(.clear)
         }
         .sheet(isPresented: $showAddExercise) {
             NavigationStack {
@@ -317,6 +317,7 @@ struct DashboardView: View {
         }
         .onChange(of: appState.selectedDate) { Task { await loadTodayExercises() } }
         .onChange(of: programService.userProgram?.id) { Task { await loadTodayExercises() } }
+        .onChange(of: appState.weekTemplateRemap) { Task { await loadTodayExercises() } }
         .onChange(of: programService.templates.count) {
             streakService.workoutDayNames = Set(programService.templates.map { $0.dayOfWeek })
             streakService.refresh()
@@ -332,8 +333,24 @@ struct DashboardView: View {
         }
     }
 
+    private func dayOfWeekName(for date: Date) -> String {
+        let names = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"]
+        return names[cal.component(.weekday, from: date) - 1]
+    }
+
     private func loadTodayExercises() async {
-        guard let template = programService.todayTemplate(for: appState.selectedDate) else {
+        let dayName = dayOfWeekName(for: appState.selectedDate)
+        let week = programService.userProgram?.currentWeek ?? 1
+
+        let template: RemoteWorkoutTemplate?
+        if let overriddenId = appState.weekTemplateRemap[dayName],
+           let overridden = programService.templates.first(where: { $0.id == overriddenId && $0.weekNumber == week }) {
+            template = overridden
+        } else {
+            template = programService.todayTemplate(for: appState.selectedDate)
+        }
+
+        guard let template else {
             appState.remoteWorkout = nil
             return
         }
