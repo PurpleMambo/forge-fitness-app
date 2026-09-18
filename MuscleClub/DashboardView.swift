@@ -275,6 +275,13 @@ struct DashboardView: View {
                     .buttonStyle(.plain)
                 }
 
+                ToolbarItem(placement: .principal) {
+                    Text("Muscle Club")
+                        .font(.system(size: 18, weight: .black))
+                        .italic()
+                        .foregroundStyle(.primary)
+                }
+
                 ToolbarItem(placement: .topBarTrailing) {
                     StreakBadgeView(streak: streakService.currentStreak)
                 }
