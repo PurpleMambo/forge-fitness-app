@@ -53,6 +53,7 @@ struct RankView: View {
     @State private var podiumProgress: [CGFloat] = [0, 0, 0]
 
     private let avatarNames = ["guy_pfp1", "guy_pfp2", "girl_pfp1", "girl_pfp2", "girl_pfp3"]
+    private let avatarOverrides: [String: String] = ["uid-egill": "Gillz"]
 
     init() {}
 
@@ -63,6 +64,7 @@ struct RankView: View {
     }
 
     private func avatar(for userId: String) -> String {
+        if let override = avatarOverrides[userId] { return override }
         let hash = userId.unicodeScalars.reduce(0) { $0 + Int($1.value) }
         return avatarNames[abs(hash) % avatarNames.count]
     }
@@ -339,7 +341,7 @@ struct RankView: View {
 // MARK: - Previews
 
 private let mockEntries: [LeaderboardRow] = [
-    LeaderboardRow(user_id: "uid-alex",   display_name: "Alex Johnson",  total_workouts: 31, current_streak: 14),
+    LeaderboardRow(user_id: "uid-egill",  display_name: "Egill",         total_workouts: 31, current_streak: 69),
     LeaderboardRow(user_id: "uid-me",     display_name: "You",           total_workouts: 24, current_streak: 12),
     LeaderboardRow(user_id: "uid-sarah",  display_name: "Sarah Chen",    total_workouts: 18, current_streak: 9),
     LeaderboardRow(user_id: "uid-marcus", display_name: "Marcus Reid",   total_workouts: 22, current_streak: 5),
