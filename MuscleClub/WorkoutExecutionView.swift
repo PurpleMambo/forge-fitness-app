@@ -31,7 +31,9 @@ struct ActiveWorkoutView: View {
                 exerciseList
             }
 
-            floatingStopButton
+            if !showFinishSheet {
+                floatingStopButton
+            }
 
             // Finish sheet slides up when stop is tapped
             if showFinishSheet {

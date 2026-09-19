@@ -86,65 +86,76 @@ struct WorkoutFinishOverlay: View {
                     .frame(width: 38, height: 4)
                     .padding(.top, 12)
 
-                VStack(spacing: 20) {
-                    // Title
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Great work!")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(Color.appAccent)
-                            Text("Log your workout?")
-                                .font(.system(size: 22, weight: .bold))
-                        }
-                        Spacer()
-                    }
+                Spacer(minLength: 16)
 
-                    // Stats row — four glass chips
-                    HStack(spacing: 8) {
-                        statChip(label: "DURATION",  value: durationString,             icon: "timer")
-                        statChip(label: "EXERCISES", value: "\(exercisesLogged)",        icon: "dumbbell.fill")
-                        statChip(label: "VOLUME",    value: volumeString,                icon: "scalemass.fill")
-                        statChip(label: "CALORIES",  value: "\(caloriesEstimate) kcal",  icon: "flame.fill")
+                // Title
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Great work!")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color.appAccent)
+                        Text("Log your workout?")
+                            .font(.system(size: 22, weight: .bold))
                     }
-
-                    // Integration toggles
-                    VStack(spacing: 0) {
-                        toggleRow(label: "Apple Health", value: $syncAppleHealth) {
-                            Image("Health icon")
-                                .resizable()
-                                .scaledToFit()
-                                .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
-                        }
-                        // TODO: Instagram Story share — wire up when ready
-//                        Rectangle().fill(.white.opacity(0.08)).frame(height: 1).padding(.leading, 60)
-//                        shareRow(label: "Instagram Story") {
-//                            Image("IG_logo")
-//                                .resizable()
-//                                .scaledToFit()
-//                                .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
-//                        }
-                    }
-                    .glassEffect(.regular, in: .rect(cornerRadius: 18))
-
-                    // Action buttons
-                    HStack(spacing: 12) {
-                        Button("Resume") { onResume() }
-                            .buttonStyle(.glass)
-                            .frame(maxWidth: .infinity)
-
-                        Button("Log Workout") {
-                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                            onFinish()
-                        }
-                        .buttonStyle(.glassProminent)
-                        .tint(.appAccent)
-                        .frame(maxWidth: .infinity)
-                    }
-                    .padding(.bottom, 44)
+                    Spacer()
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 20)
+
+                Spacer(minLength: 16)
+
+                // Stats row — four glass chips
+                HStack(spacing: 8) {
+                    statChip(label: "DURATION",  value: durationString,             icon: "timer")
+                    statChip(label: "EXERCISES", value: "\(exercisesLogged)",        icon: "dumbbell.fill")
+                    statChip(label: "VOLUME",    value: volumeString,                icon: "scalemass.fill")
+                    statChip(label: "CALORIES",  value: "\(caloriesEstimate) kcal",  icon: "flame.fill")
+                }
+                .padding(.horizontal, 20)
+
+                Spacer(minLength: 16)
+
+                // Integration toggles
+                VStack(spacing: 0) {
+                    toggleRow(label: "Apple Health", value: $syncAppleHealth) {
+                        Image("Health icon")
+                            .resizable()
+                            .scaledToFit()
+                            .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                    }
+                    // TODO: Instagram Story share — wire up when ready
+//                    Rectangle().fill(.white.opacity(0.08)).frame(height: 1).padding(.leading, 60)
+//                    shareRow(label: "Instagram Story") {
+//                        Image("IG_logo")
+//                            .resizable()
+//                            .scaledToFit()
+//                            .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+//                    }
+                }
+                .glassEffect(.regular, in: .rect(cornerRadius: 18))
+                .padding(.horizontal, 20)
+
+                Spacer(minLength: 16)
+
+                // Action buttons
+                HStack(spacing: 12) {
+                    Button("Resume") { onResume() }
+                        .buttonStyle(.glass)
+                        .controlSize(.extraLarge)
+                        .frame(maxWidth: .infinity)
+
+                    Button("Log Workout") {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        onFinish()
+                    }
+                    .buttonStyle(.glassProminent)
+                    .controlSize(.extraLarge)
+                    .tint(.appAccent)
+                    .frame(maxWidth: .infinity)
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 44)
             }
+            .frame(height: UIScreen.main.bounds.height * 0.56)
             .glassEffect(.regular, in: UnevenRoundedRectangle(
                 topLeadingRadius: 28,
                 bottomLeadingRadius: 0,
