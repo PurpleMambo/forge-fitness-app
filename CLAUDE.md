@@ -17,13 +17,20 @@ There are no tests yet.
 
 ### App entry & global state
 
-`ContentView.swift` is the entry point (`@main MyApp`). It creates three root-level singletons injected via `.environment()`: `AppState`, `StoreVM`, and `ProgramService`.
+`ContentView.swift` is the entry point (`@main MyApp`). It creates four root-level singletons injected via `.environment()`: `AppState`, `StoreVM`, `ProgramService`, and `StreakService`.
 
-`RootView` has a four-state gate:
+**Debug flags at top of `ContentView.swift`** — set back to `false` before shipping:
+```swift
+private let debugShowDashboard = true   // ← flip to false before shipping
+private let debugShowPaywall   = false
+private let debugShowRankView  = false
+```
+When `debugShowDashboard` is true, `RootView` skips all gates and shows `MainTabView` directly, using `programService.loadForDebug()` (hardcoded male program UUID).
 
+`RootView` normal gate (when debug flags are all false):
 1. `!appState.sessionCheckComplete` → blank `AppBackground()` (splash while checking Supabase session)
 2. `!appState.welcomeSeen` → `WelcomeView`
-3. `appState.onboardingComplete` → `MainTabView` (also triggers `programService.loadAll()`)
+3. `appState.onboardingComplete` → `MainTabView` (triggers `programService.loadAll()`)
 4. otherwise → `NewOnboardingFlowView`
 
 `AppState` (`Models.swift`) is an `@Observable` class — the only shared mutable state. Key fields:
@@ -34,23 +41,26 @@ There are no tests yet.
 - `remoteWorkout: WorkoutDay?` — set by `DashboardView.loadTodayExercises()`; takes priority in `todayWorkout`
 - `todayWorkout: WorkoutDay?` — computed: returns `remoteWorkout` if set, otherwise falls back to hardcoded `WorkoutDay.weekSchedule`
 - `workoutStore: WorkoutStore` — persists `[LoggedSetEntry]` to `UserDefaults` (key `workout_logged_sets_v1`)
+- `weekTemplateRemap: [String: UUID]` — session-only map of `dayOfWeek → overriding templateId`; cleared when program or week changes; lets the user swap today's workout without a Supabase write
 
 ### Supabase / live data (`ProgramService.swift`)
 
 `ProgramService` is an `@Observable @MainActor` class injected at the root. It owns:
+- `programs: [RemoteProgram]`
 - `userProgram: RemoteUserProgram?` — the user's enrolled program and current week
 - `templates: [RemoteWorkoutTemplate]` — all workout templates for that program
+- `milestones: [RemoteMilestone]` — program milestones for the Target tab
 - `exerciseCache: [UUID: [RemoteWorkoutExercise]]` — in-memory cache keyed by template ID
 
-**Bootstrap:** `loadAll()` is called from `ContentView` when `MainTabView` appears. It fetches programs, user program, and templates in parallel.
+**Bootstrap:** `loadAll()` fetches programs, user program, templates, and milestones in parallel. `loadForDebug()` is the equivalent for the debug flag path.
 
 **Dashboard data flow:**
-1. `DashboardView.loadTodayExercises()` calls `programService.todayTemplate(for: selectedDate)` to get today's template
-2. Then `programService.exercises(for: template.id)` to get exercises (cached)
+1. `DashboardView.loadTodayExercises()` checks `appState.weekTemplateRemap` first, then falls back to `programService.todayTemplate(for: selectedDate)`
+2. Calls `programService.exercises(for: template.id)` (cached)
 3. Maps `RemoteWorkoutExercise → Exercise` via `RemoteWorkoutExercise.toExercise()` in `RemoteModels.swift`
-4. Sets `appState.remoteWorkout` so `todayWorkout` picks it up
+4. Sets `appState.remoteWorkout`
 
-`DashboardView` re-runs this whenever `selectedDate` or `programService.userProgram?.id` changes.
+`DashboardView` re-runs `loadTodayExercises()` whenever `selectedDate`, `programService.userProgram?.id`, or `appState.weekTemplateRemap` changes.
 
 ### Remote models (`RemoteModels.swift`)
 
@@ -59,6 +69,17 @@ Codable structs that mirror the Supabase schema. Key types:
 - `RemoteWorkoutExercise` — join table row; embeds `RemoteExercise` via `select("*, exercise:exercises(*)")`
 - `RemoteExercise.videoUrl` — HTTPS URL to Supabase Storage; nil if no video uploaded yet
 - `RemoteWorkoutExercise.toExercise()` — only converts rows where `exerciseType == "exercise"` (skips warmups/cardio/cooldowns)
+
+### Streak tracking (`StreakService.swift`)
+
+`StreakService` is an `@Observable @MainActor` class. It reads the `workout_logs` Supabase table (keyed by `user_id, logged_date`) and computes:
+- `currentStreak: Int` — consecutive scheduled workout days that were logged, walking backwards from today. Rest days are transparent (don't break or count). Today's workout day doesn't break the streak if not yet logged.
+- `longestStreak: Int` — persisted to `UserDefaults`
+- `totalWorkouts: Int` — count of distinct logged dates (used by `TargetView` for milestone status)
+
+`workoutDayNames: Set<String>` is set by `DashboardView` from `programService.templates`; falls back to `["monday","tuesday","wednesday","friday"]` if templates haven't loaded.
+
+`logWorkout(workoutName:durationSeconds:volumeKg:calories:)` does an optimistic local update before upserting to `workout_logs`.
 
 ### Onboarding flow (`NewOnboardingFlowView.swift`)
 
@@ -71,8 +92,6 @@ Codable structs that mirror the Supabase schema. Key types:
 ```
 
 - 26-step questionnaire defined in `newOnboardingSteps: [NewOnboardingStep]` (keyed by stable `id: Int`)
-- Skips the World Class location step (id 13) when a different gym is chosen
-- Inserts `.goalSpeed`, `.sleep`, `.supplements` custom screens at fixed branch points
 - `isGoingBack` flips the slide transition direction
 - `vm.selectedProgramId` computes the correct program UUID from the gender answer (step id 25) and is passed directly to `SignUpView(programId:)`
 - `NewOnboardingFlow_CommitStepView` closes onboarding by setting `appState.onboardingComplete = true`
@@ -92,21 +111,23 @@ Apple Sign In and Google Sign In (native SDK, no browser popup) both flow into `
 
 ### Main app flow (`DashboardView.swift`)
 
-`MainTabView` has four tabs; only "Workout" (`DashboardView`) is implemented. The others are `PlaceholderTabView`.
+`MainTabView` has four tabs: Workout (`DashboardView`), Rank (`RankView`), Targets (`TargetView`), Explore (`ExploreView`).
 
 `MainTabView` hosts a `WorkoutAccessoryView` in `.tabViewBottomAccessory` (music-player mini-bar pattern) that collapses inline when scrolling.
+
+**Week strip** — shows the current month broken into ISO weeks, snapping week-by-week with `.scrollTargetBehavior(.viewAligned)`. Workout-day dots are derived live from `programService.templates.map { $0.dayOfWeek }` — no hardcoded schedule. The selected day gets a Liquid Glass pill animated with `.glassEffectID("daysel", in: dayNamespace)`.
 
 Dashboard exercise tap flow:
 1. Tap exercise row → sets `setupExercise`, shows `ExerciseSetupView` as a sheet
 2. In `ExerciseSetupView`, tap "How-To" → `ExerciseDetailView` sheet (video + instructions)
 3. Tap "Start Workout" → dismisses setup sheet, waits 350ms, sets `appState.showActiveWorkout = true`
 
-The week strip uses hardcoded `WorkoutDay.weekSchedule` for the workout-day dots (not live data).
+**Switch sheet** — `SwitchSheetView` lets the user swap today's workout template. It writes to `appState.weekTemplateRemap`, which triggers `loadTodayExercises()` to reload.
 
 ### Active workout flow (`WorkoutExecutionView.swift`)
 
 `ActiveWorkoutView` is a full-screen cover presented from `MainTabView`. Key interactions:
-- `xmark` button and floating stop button (red circle) both set `showFinishSheet = true`
+- `xmark` button and floating stop button both set `showFinishSheet = true`
 - `WorkoutFinishOverlay` slides up: backdrop/X resumes; "Log Workout" → sets `showSummary = true`
 - `WorkoutSummaryView` is a `.fullScreenCover` inside `ActiveWorkoutView`; its `onDone` dismisses the whole cover
 
@@ -126,45 +147,13 @@ Controlled by which optional params are provided:
 
 Always use `Bundle.videoURL(named:)` for local files, never `Bundle.main.url(forResource:withExtension:)`.
 
-### In-app purchases (`StoreVM.swift` / `PaywallView.swift`)
-
-`StoreVM` is an `@Observable @MainActor` class. Two auto-renewable subscriptions:
-
-| Product ID | Plan |
-|---|---|
-| `themuscleclub.subscription.yearly` | Annual |
-| `themuscleclub.subscription.weekly` | Weekly |
-
-A background `Task` listens to `StoreKit.Transaction.updates` for the app's lifetime. `MuscleClubPaywallView` calls `storeVM.purchase(_:)`; completion is guarded by a `didComplete` flag to prevent double-firing from both the return value and `onChange(of: storeVM.hasActiveSubscription)`.
-
-### Design system
-
-iOS 26 app built entirely around **Liquid Glass**. Key patterns:
-
-- `.glassEffect()` / `.glassEffect(.regular.tint(.appAccent))` — containers and cards
-- `.buttonStyle(.glass)` / `.buttonStyle(.glassProminent)` — standard button styles
-- `GlassEffectContainer(spacing:)` — required wrapper for morph/matchedGeometry between sibling glass elements
-- `.glassEffectID(_:in:)` with a `@Namespace` — animated selected-day pill in the week strip
-- `AppBackground` — reusable gradient view; use as the base `ZStack` layer in every screen
-
-The app is dark-only (`.preferredColorScheme(.dark)` at root).
-
-### Colors (`Models.swift`)
-
-| Name | Value | Usage |
-|---|---|---|
-| `appAccent` | Crimson red | Primary interactive tint |
-| `appGold` | Golden yellow | Section headers, focus labels |
-| `appBg` | Dark purple-black | Background reference (use `AppBackground` instead) |
-
 ### Target tab & milestone system (`TargetView.swift`)
 
-The Target tab shows a progress ring, hero stats, and a vertical milestone timeline. All milestone data is **fully dynamic — stored in Supabase, not hardcoded in Swift**.
-
-**Data flow:**
-1. `ProgramService.loadAll()` fetches `program_milestones` in parallel with templates
-2. `ProgramService.milestones: [RemoteMilestone]` is exposed to views
-3. `TargetView` maps `programService.milestones` → `[GoalMilestone]`, computing `.completed / .current / .upcoming` status by comparing `streakService.totalWorkouts` against each milestone's `workoutThreshold`
+`TargetView` is fully wired to live data via `@Environment`. It derives:
+- `workoutCount` / `currentStreak` from `StreakService`
+- `currentWeek` / `totalWeeks` / `programName` / milestone list from `ProgramService`
+- `overallProgress = (currentWeek - 1) / totalWeeks`
+- Milestone `.status` by comparing `workoutCount` against each `RemoteMilestone.workoutThreshold`
 
 **Supabase table: `program_milestones`**
 
@@ -181,13 +170,13 @@ The Target tab shows a progress ring, hero stats, and a vertical milestone timel
 
 **Adding a new program — checklist:**
 
-1. **Supabase `programs` table** — INSERT a new row with a fresh UUID, `name`, `name_is`, `gender`, `days_per_week`
+1. **Supabase `programs` table** — INSERT row with UUID, `name`, `name_is`, `gender`, `days_per_week`
 2. **Supabase `workout_templates`** — INSERT weekly templates (`week_number`, `day_of_week`, `sort_order`) for the new `program_id`
-3. **Supabase `workout_exercises`** — INSERT exercises for each template, referencing rows in the `exercises` table
-4. **Supabase `program_milestones`** — INSERT milestone rows for the new `program_id` with appropriate `workout_threshold` values and SF Symbols
-5. **`NewOnboardingFlowView.swift` → `selectedProgramId`** — extend the computed property to return the new program's UUID based on the onboarding answers (currently only branches on gender via step id 25; add goal-type branching here when needed)
+3. **Supabase `workout_exercises`** — INSERT exercises per template, referencing `exercises` table rows
+4. **Supabase `program_milestones`** — INSERT milestone rows with `workout_threshold` values and SF Symbols
+5. **`NewOnboardingFlowView.swift` → `selectedProgramId`** — extend the computed property to return the new UUID based on onboarding answers (currently branches only on gender via step id 25)
 
-No Swift model changes are required — `RemoteMilestone` and `ProgramService` already handle any program generically.
+No Swift model changes required — `RemoteMilestone` and `ProgramService` handle any program generically.
 
 **Current programs:**
 
@@ -198,8 +187,42 @@ No Swift model changes are required — `RemoteMilestone` and `ProgramService` a
 
 Program assignment is currently gender-only (onboarding step id 25). When adding goal-type programs (e.g. "Get Lean", "Powerlifting"), also store the fitness goal answer from step id 0 and combine it with gender in `selectedProgramId`.
 
+### In-app purchases (`StoreVM.swift` / `PaywallView.swift`)
+
+`StoreVM` is an `@Observable @MainActor` class. Two auto-renewable subscriptions:
+
+| Product ID | Plan |
+|---|---|
+| `themuscleclub.subscription.yearly` | Annual |
+| `themuscleclub.subscription.weekly` | Weekly |
+
+A background `Task` listens to `StoreKit.Transaction.updates` for the app's lifetime. `MuscleClubPaywallView` calls `storeVM.purchase(_:)`; completion is guarded by a `didComplete` flag to prevent double-firing from both the return value and `onChange(of: storeVM.hasActiveSubscription)`.
+
+### Design system
+
+iOS 26 app built around **Liquid Glass**. Key patterns:
+
+- `.glassEffect()` / `.glassEffect(.regular.tint(.appAccent))` — containers and cards
+- `.buttonStyle(.glass)` / `.buttonStyle(.glassProminent)` — standard button styles
+- `GlassEffectContainer(spacing:)` — required wrapper for morph/matchedGeometry between sibling glass elements
+- `.glassEffectID(_:in:)` with a `@Namespace` — animated selected-day pill in the week strip
+- `AppBackground` — `MeshGradient` view; use as the base `ZStack` layer in every screen. Has both dark and light mode variants — do not force dark-only at the root.
+
+### Colors (`Models.swift`)
+
+| Name | Value | Usage |
+|---|---|---|
+| `appAccent` | `Color.mint` | Primary interactive tint, buttons, highlights |
+| `appGold` | `Color.mint` | Section headers, focus labels (currently same as accent) |
+| `appBg` | Dark/light adaptive | Background reference (use `AppBackground` instead) |
+
 ### Supabase project
 
 - URL: `https://neomyrexkfgrsrcqvnsb.supabase.co`
 - Client singleton: `supabase` in `SupabaseClient.swift`
 - Storage bucket: `exercise-videos` — HTTPS URLs stored in `exercises.video_url`
+- Video URL pattern: `https://neomyrexkfgrsrcqvnsb.supabase.co/storage/v1/object/public/exercise-videos/{Folder}/{filename}.mov` (folder names are case-sensitive; spaces encoded as `%20`)
+
+### Known pre-ship content gap
+
+5 shoulder exercises have no `video_url` in Supabase because the `Axlir` folder was uploaded before the English renaming session (still has Icelandic filenames with spaces): Dumbbell Lateral Raise, Standing Barbell Shoulder Press, Seated Dumbbell Shoulder Press, Dumbbell Front Raise, Standing Dumbbell Shoulder Press. Fix: re-upload with English snake_case filenames and run the pending UPDATE statements in `/Users/gisliprufugaur/Developer/MuscleClub/video_url_updates.sql`.

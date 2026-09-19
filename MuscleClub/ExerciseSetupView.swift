@@ -451,22 +451,26 @@ struct ExerciseSetupView: View {
     // MARK: - Active Bottom CTA (Log Set / Log All Sets)
 
     var activeBottomCTA: some View {
-        VStack(spacing: 0) {
-            LinearGradient(colors: [.clear, Color.appBg], startPoint: .top, endPoint: .bottom)
-                .frame(height: 40).allowsHitTesting(false)
-            HStack(spacing: 12) {
-                Button("Log All Sets") { logAllSets() }
-                    .buttonStyle(.glass)
-                    .frame(maxWidth: .infinity)
-                    .disabled(allSetsLogged)
+        HStack(spacing: 12) {
+            Button("Log All Sets") { logAllSets() }
+                .buttonStyle(.glass)
+                .controlSize(.extraLarge)
+                .frame(maxWidth: .infinity)
+                .disabled(allSetsLogged)
 
-                Button("Log Set") { logCurrentSet() }
-                    .buttonStyle(.glassProminent)
-                    .tint(.appAccent)
-                    .frame(maxWidth: .infinity)
-                    .disabled(allSetsLogged)
-            }
-            .padding(.horizontal, 18).padding(.bottom, 32)
+            Button("Log Set") { logCurrentSet() }
+                .buttonStyle(.glassProminent)
+                .controlSize(.extraLarge)
+                .tint(.appAccent)
+                .frame(maxWidth: .infinity)
+                .disabled(allSetsLogged)
+        }
+        .padding(.horizontal, 18)
+        .padding(.top, 20)
+        .padding(.bottom, 32)
+        .background {
+            LinearGradient(colors: [.clear, Color.appBg], startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea(edges: .bottom)
         }
     }
 
@@ -633,21 +637,24 @@ struct ExerciseSetupView: View {
     // MARK: - Setup Mode CTA
 
     var bottomCTA: some View {
-        VStack(spacing: 0) {
-            LinearGradient(colors: [.clear, Color.appBg], startPoint: .top, endPoint: .bottom)
-                .frame(height: 40).allowsHitTesting(false)
-            Button("Start Workout") {
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                if let onStart = onStartWorkout {
-                    onStart()
-                } else {
-                    dismiss()
-                }
+        Button("Start Workout") {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            if let onStart = onStartWorkout {
+                onStart()
+            } else {
+                dismiss()
             }
-            .buttonStyle(.glassProminent)
-            .tint(.appAccent)
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 18).padding(.bottom, 32)
+        }
+        .buttonStyle(.glassProminent)
+        .controlSize(.extraLarge)
+        .tint(.appAccent)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 18)
+        .padding(.top, 20)
+        .padding(.bottom, 32)
+        .background {
+            LinearGradient(colors: [.clear, Color.appBg], startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea(edges: .bottom)
         }
     }
 }
