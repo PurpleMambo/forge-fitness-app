@@ -8,6 +8,8 @@ struct AccountView: View {
     @State private var userEmail: String = ""
     @State private var showLogoutAlert = false
     @State private var showDeleteAlert = false
+    @State private var showDeleteError = false
+    @State private var deleteErrorDetail = ""
     @State private var isLoading = false
 
     private var initials: String {
@@ -96,10 +98,17 @@ struct AccountView: View {
             Text("Are you sure you want to log out?")
         }
         .alert("Delete Account", isPresented: $showDeleteAlert) {
-            Button("Delete", role: .destructive) { Task { await logOut() } }
+            Button("Delete", role: .destructive) { Task { await deleteAccount() } }
             Button("Cancel", role: .cancel) { }
         } message: {
             Text("Your account and all data will be permanently deleted. This cannot be undone.")
+        }
+        .alert("Couldn't Delete Account", isPresented: $showDeleteError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(deleteErrorDetail.isEmpty
+                ? "Something went wrong. Please check your connection and try again."
+                : deleteErrorDetail)
         }
     }
 
@@ -112,6 +121,30 @@ struct AccountView: View {
         } else if case .string(let name) = user.userMetadata["name"] {
             userName = name
         }
+    }
+
+    @MainActor
+    private func deleteAccount() async {
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            // delete_account is a SECURITY DEFINER Postgres function (delete_account.sql):
+            // deletes the caller's workout_logs / logged_sets / user_programs rows and
+            // their auth.users row. Must succeed before we tear down local state —
+            // falling through to a plain sign-out would fake a deletion.
+            try await supabase.rpc("delete_account").execute()
+        } catch {
+            print("delete_account RPC failed:", error)
+            deleteErrorDetail = error.localizedDescription
+            showDeleteError = true
+            return
+        }
+        // The auth user is gone, so server-side sign-out may fail; local sign-out
+        // still clears the stored session.
+        try? await supabase.auth.signOut()
+        appState.isAuthenticated = false
+        appState.onboardingComplete = false
+        appState.welcomeSeen = false
     }
 
     @MainActor

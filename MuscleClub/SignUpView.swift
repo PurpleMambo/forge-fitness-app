@@ -9,6 +9,7 @@ private let googleiOSClientID = "837041480144-s8juc3a72qjc1u3te945e28kvnne5e4u.a
 struct SignUpView: View {
     let onComplete: () -> Void
     var programId: UUID = UUID(uuidString: "a0000000-0000-0000-0000-000000000001")!
+    var onboarding: NewOnboardingFlowViewModel? = nil
 
     @Environment(AppState.self) private var appState
     @Environment(ProgramService.self) private var programService
@@ -130,6 +131,7 @@ struct SignUpView: View {
             ))
             appState.isAuthenticated = true
             Task { try? await programService.assignProgram(programId: programId) }
+            Task { await saveProfile() }
             onComplete()
         } catch {
             errorMessage = error.localizedDescription
@@ -167,11 +169,30 @@ struct SignUpView: View {
             ))
             appState.isAuthenticated = true
             Task { try? await programService.assignProgram(programId: programId) }
+            Task { await saveProfile() }
             onComplete()
         } catch {
             if (error as? GIDSignInError)?.code != .canceled {
                 errorMessage = error.localizedDescription
             }
+        }
+    }
+
+    // MARK: - Profile persistence
+
+    // Upserts the onboarding answers into public.profiles (see profiles.sql).
+    // Errors are logged but never block sign-up — the account and program
+    // assignment matter more than the questionnaire data.
+    private func saveProfile() async {
+        guard let onboarding,
+              let user = try? await supabase.auth.session.user else { return }
+        do {
+            try await supabase
+                .from("profiles")
+                .upsert(onboarding.profileUpsert(userId: user.id), onConflict: "user_id")
+                .execute()
+        } catch {
+            print("profile save failed:", error)
         }
     }
 

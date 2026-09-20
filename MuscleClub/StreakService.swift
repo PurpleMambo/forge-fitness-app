@@ -71,6 +71,27 @@ final class StreakService {
         recompute()
     }
 
+#if DEBUG
+    /// Seeds fake workout history for the debug dashboard path. There is no auth
+    /// session in that path, so `loadStreak()` returns early and never overwrites this.
+    /// Assigns `currentStreak` directly instead of via `recompute()` so the fake
+    /// streak doesn't persist into the real longest-streak UserDefaults value.
+    func loadMockData(workoutDayNames: Set<String>, loggedWorkouts: Int = 14) {
+        if !workoutDayNames.isEmpty { self.workoutDayNames = workoutDayNames }
+        let cal = Calendar.current
+        var date = Date()
+        var dates: Set<String> = []
+        while dates.count < loggedWorkouts {
+            if effectiveWorkoutDays.contains(weekdayName(from: date)) {
+                dates.insert(localDateString(from: date))
+            }
+            date = cal.date(byAdding: .day, value: -1, to: date)!
+        }
+        loggedDates = dates
+        currentStreak = computeStreak(workoutDayNames: effectiveWorkoutDays)
+    }
+#endif
+
     // MARK: - Streak computation
 
     private func recompute() {

@@ -317,6 +317,97 @@ final class NewOnboardingFlowViewModel {
     }
 }
 
+// MARK: - Profile payload
+
+// Mirrors the public.profiles table (profiles.sql) — property names are column names.
+struct ProfileUpsert: Encodable {
+    let user_id: String
+    let full_name: String?
+    let gender: String?
+    let location: String?
+    let fitness_goal: String?
+    let current_weight_kg: Int?
+    let height_cm: Int?
+    let goal_weight_kg: Int?
+    let goal_speed: String?
+    let training_routine: String?
+    let training_history: String?
+    let played_sports_before: Bool?
+    let plays_sports_currently: Bool?
+    let exercise_preference: String?
+    let gym_size: String?
+    let equipment: [String]
+    let training_days_per_week: String?
+    let workout_duration: String?
+    let work_activity: String?
+    let injuries: String?
+    let used_supplements: String?
+    let sleep_duration: String?
+    let sleep_goals: [String]
+    let diet_quality: String?
+    let food_intolerances: String?
+    let meal_regularity: String?
+    let wants_notifications: String?
+    let calorie_tracking: String?
+    let referral_source: String?
+}
+
+extension NewOnboardingFlowViewModel {
+    // answers[] fills 1:1 with newOnboardingSteps order (the supplements screen
+    // appends into step id 18's slot via supplementsPick), so a step's answer
+    // lives at its index in the steps array.
+    private func answer(stepId: Int) -> String? {
+        guard let idx = newOnboardingSteps.firstIndex(where: { $0.id == stepId }),
+              idx < answers.count else { return nil }
+        return answers[idx]
+    }
+
+    private func intAnswer(stepId: Int) -> Int? {
+        guard let raw = answer(stepId: stepId) else { return nil }
+        // Number-picker answers are formatted "80 kg" / "175 cm"
+        return Int(raw.components(separatedBy: " ").first ?? "")
+    }
+
+    private func boolAnswer(stepId: Int) -> Bool? {
+        guard let raw = answer(stepId: stepId) else { return nil }
+        return raw == "Yes"
+    }
+
+    func profileUpsert(userId: UUID) -> ProfileUpsert {
+        ProfileUpsert(
+            user_id: userId.uuidString,
+            full_name: answer(stepId: 1),
+            gender: answer(stepId: 25),
+            location: answer(stepId: 2),
+            fitness_goal: answer(stepId: 0),
+            current_weight_kg: intAnswer(stepId: 3),
+            height_cm: intAnswer(stepId: 4),
+            goal_weight_kg: intAnswer(stepId: 5),
+            goal_speed: goalSpeedAnswer.isEmpty ? nil : goalSpeedAnswer,
+            training_routine: answer(stepId: 6),
+            training_history: answer(stepId: 7),
+            played_sports_before: boolAnswer(stepId: 8),
+            plays_sports_currently: boolAnswer(stepId: 9),
+            exercise_preference: answer(stepId: 10),
+            gym_size: gymSizeAnswer.isEmpty ? nil : gymSizeAnswer,
+            equipment: selectedEquipment.sorted(),
+            training_days_per_week: answer(stepId: 14),
+            workout_duration: answer(stepId: 15),
+            work_activity: answer(stepId: 16),
+            injuries: answer(stepId: 17),
+            used_supplements: answer(stepId: 18),
+            sleep_duration: sleepDurationAnswer.isEmpty ? nil : sleepDurationAnswer,
+            sleep_goals: sleepGoalsAnswer.sorted(),
+            diet_quality: answer(stepId: 19),
+            food_intolerances: answer(stepId: 20),
+            meal_regularity: answer(stepId: 21),
+            wants_notifications: answer(stepId: 22),
+            calorie_tracking: answer(stepId: 23),
+            referral_source: answer(stepId: 24)
+        )
+    }
+}
+
 // MARK: - Coordinator
 
 struct NewOnboardingFlowView: View {
@@ -363,7 +454,9 @@ struct NewOnboardingFlowView: View {
             NewOnboardingFlow_SocialProofScreen(model: model)
                 .transition(.opacity)
         case .signUp:
-            SignUpView(programId: model.selectedProgramId) { model.advance() }
+            SignUpView(onComplete: { model.advance() },
+                       programId: model.selectedProgramId,
+                       onboarding: model)
                 .transition(slideTransition)
         case .featureShowcase:
             NewOnboardingFlow_FeatureShowcaseScreen(model: model)

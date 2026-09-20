@@ -1,6 +1,7 @@
 import SwiftUI
 import Playgrounds
 import GoogleSignIn
+import Supabase
 
 @main struct MyApp: App {
     @State private var appState       = AppState()
@@ -22,17 +23,30 @@ import GoogleSignIn
 // DEBUG — flip to true to land directly on a specific screen. Set back to false before shipping.
 private let debugShowRankView   = false
 private let debugShowPaywall    = false
-private let debugShowDashboard  = true   // ← flip to false before shipping
+private let debugShowDashboard  = false   // ← flip to false before shipping
+
+// Signs out and clears welcomeSeen/onboardingComplete at launch so the full
+// Welcome → onboarding → sign-up flow can be tested end to end.
+// Only takes effect in Debug builds (#if DEBUG at the call site).
+private let debugResetOnboarding = false
 
 struct RootView: View {
     @Environment(AppState.self) var appState
     @Environment(ProgramService.self) var programService
+    @Environment(StreakService.self) var streakService
 
     var body: some View {
         Group {
             if debugShowDashboard {
                 MainTabView()
-                    .task { await programService.loadForDebug() }
+                    .task {
+                        await programService.loadForDebug()
+                        #if DEBUG
+                        streakService.loadMockData(
+                            workoutDayNames: Set(programService.templates.map(\.dayOfWeek))
+                        )
+                        #endif
+                    }
             } else if debugShowPaywall {
                 MuscleClubPaywallView(
                     onDismiss: {},
@@ -55,7 +69,16 @@ struct RootView: View {
                 NewOnboardingFlowView()
             }
         }
-        .task { await appState.checkSession() }
+        .task {
+            #if DEBUG
+            if debugResetOnboarding {
+                try? await supabase.auth.signOut()
+                appState.welcomeSeen = false
+                appState.onboardingComplete = false
+            }
+            #endif
+            await appState.checkSession()
+        }
         .onOpenURL { url in
             GIDSignIn.sharedInstance.handle(url)
         }

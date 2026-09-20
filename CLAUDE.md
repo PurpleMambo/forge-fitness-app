@@ -21,11 +21,15 @@ There are no tests yet.
 
 **Debug flags at top of `ContentView.swift`** — set back to `false` before shipping:
 ```swift
-private let debugShowDashboard = true   // ← flip to false before shipping
-private let debugShowPaywall   = false
-private let debugShowRankView  = false
+private let debugShowRankView    = false
+private let debugShowPaywall     = false
+private let debugShowDashboard   = false  // ← flip to false before shipping
+private let debugResetOnboarding = false  // sign out + clear flags at launch to test onboarding
 ```
-When `debugShowDashboard` is true, `RootView` skips all gates and shows `MainTabView` directly, using `programService.loadForDebug()` (hardcoded male program UUID).
+⚠️ The three `debugShow*` flags are plain constants, **not** `#if DEBUG`-gated — a `true` value ships in Release. `debugResetOnboarding` is safe: its call site is wrapped in `#if DEBUG`, so Release ignores it. When it's on, every Debug launch signs out of Supabase and clears `welcomeSeen`/`onboardingComplete` before `checkSession()` runs, landing on `WelcomeView` for a full onboarding run.
+When `debugShowDashboard` is true, `RootView` skips all gates and shows `MainTabView` directly, using `programService.loadForDebug()` (hardcoded male program UUID). The `if/else` chain checks Dashboard → Paywall → RankView, so `debugShowDashboard = true` masks the other two flags.
+
+The debug path also seeds mock TargetView data: `loadForDebug()` fakes `currentWeek = 5` (clamped to the max seeded week so `todayTemplate()` still resolves), and `RootView` calls `streakService.loadMockData(workoutDayNames:)` (`#if DEBUG`-gated) to fake 14 logged workouts on the program's real workout days. There's no auth session in this path, so `loadStreak()` returns early and never overwrites the mock. `loadMockData` sets `currentStreak` directly instead of via `recompute()` to avoid persisting the fake streak into the real longest-streak UserDefaults value.
 
 `RootView` normal gate (when debug flags are all false):
 1. `!appState.sessionCheckComplete` → blank `AppBackground()` (splash while checking Supabase session)
@@ -96,7 +100,7 @@ Codable structs that mirror the Supabase schema. Key types:
 - `vm.selectedProgramId` computes the correct program UUID from the gender answer (step id 25) and is passed directly to `SignUpView(programId:)`
 - `NewOnboardingFlow_CommitStepView` closes onboarding by setting `appState.onboardingComplete = true`
 
-`OnboardingView.swift` is an older chat-bubble onboarding — **no longer used**.
+**Dead code (compiles but unreferenced):** `OnboardingView.swift` is an older chat-bubble onboarding, fully unused. `FullScreenVideoView.swift` is also dead — its only call site in `ExerciseDetailView.swift` is commented out (tap now pauses/resumes inline).
 
 ### Auth (`SignUpView.swift`)
 
@@ -108,6 +112,10 @@ Apple Sign In and Google Sign In (native SDK, no browser popup) both flow into `
 `SignUpView` takes a `programId: UUID` parameter — wired from the onboarding VM's gender answer:
 - Male: `a0000000-0000-0000-0000-000000000001`
 - Female: `a0000000-0000-0000-0000-000000000002`
+
+**Returning users — `LoginView.swift`:** presented as a sheet from `WelcomeView` ("Already have an account?"). Same two providers, but `finishLogin()` deliberately does **not** assign a program — it runs `programService.loadAll()` and only sets `onboardingComplete = true` if `userProgram != nil`, so a sign-in without an existing account falls through to onboarding instead of an empty dashboard. It has its own local `googleiOSClientID` constant (duplicated from `SignUpView`).
+
+**Account — `AccountView.swift`:** pushed via `.navigationDestination` from `DashboardView`'s top-leading toolbar button. Name comes from `userMetadata["full_name"]` (Google) then `["name"]` (Apple). `logOut()` resets `isAuthenticated`, `onboardingComplete`, **and** `welcomeSeen`, sending the user back to `WelcomeView`. "Delete Account" calls the `delete_account` Supabase RPC (a `SECURITY DEFINER` function defined in `/Users/gisliprufugaur/Developer/MuscleClub/delete_account.sql` — must be run in the Supabase SQL editor) which deletes the caller's `workout_logs`/`logged_sets`/`user_programs` rows and their `auth.users` row, then signs out locally. If the RPC fails, an error alert is shown and local state is left intact.
 
 ### Main app flow (`DashboardView.swift`)
 
@@ -124,12 +132,18 @@ Dashboard exercise tap flow:
 
 **Switch sheet** — `SwitchSheetView` lets the user swap today's workout template. It writes to `appState.weekTemplateRemap`, which triggers `loadTodayExercises()` to reload.
 
+**Add exercise — `AddExerciseView.swift`** — multi-select exercise picker sheet, used from both `DashboardView` (appends to local `userAddedExercises`) and `SwitchSheetView`'s custom-workout builder. Communicates only via an `onAdd: ([Exercise]) -> Void` callback — nothing is persisted to Supabase. It fetches the `exercises` table directly (bypassing `ProgramService`, no cache) and maps picks to `Exercise` with hardcoded defaults (3×10 @ 0 kg, no video/instructions). The "By Muscle" tab classifies via hardcoded string sets — new `muscle_group` values silently land in "Other". Also defines the reusable `ExerciseThumbnailView` (still-frame from remote video via `AVAssetImageGenerator`, SF Symbol fallback).
+
 ### Active workout flow (`WorkoutExecutionView.swift`)
 
 `ActiveWorkoutView` is a full-screen cover presented from `MainTabView`. Key interactions:
 - `xmark` button and floating stop button both set `showFinishSheet = true`
-- `WorkoutFinishOverlay` slides up: backdrop/X resumes; "Log Workout" → sets `showSummary = true`
+- `WorkoutFinishOverlay` (defined in `WorkoutFinishView.swift` — name ≠ filename) slides up: backdrop/X resumes; "Log Workout" → sets `showSummary = true`
 - `WorkoutSummaryView` is a `.fullScreenCover` inside `ActiveWorkoutView`; its `onDone` dismisses the whole cover
+
+**The Supabase workout log write happens in `WorkoutSummaryView`'s `.task`** — it calls `streakService.logWorkout(...)`, so logging is coupled to that screen appearing. The summary's header share button opens `WorkoutShareView` (full-screen, two card styles; only the "More" `ShareLink` works — it shares plain text, and the Instagram button is a no-op) and its `···` opens `WorkoutOptionsSheet` (only "Resume" and "Delete" are wired; "Save" and "Edit duration" are no-op closures). The confetti on the summary is the hand-rolled `ConfettiView`, not the `confetti(2).lottie` file.
+
+The `volume × 0.11` calorie heuristic is duplicated in `WorkoutFinishView`, `WorkoutSummaryView`, and `WorkoutShareView` — change all three together. The "Apple Health" toggle in `WorkoutFinishOverlay` writes to a `@State` that's never read; HealthKit isn't linked yet (see the TODO block at the top of `WorkoutFinishView.swift`).
 
 ### ExerciseSetupView dual modes
 
@@ -187,6 +201,16 @@ No Swift model changes required — `RemoteMilestone` and `ProgramService` handl
 
 Program assignment is currently gender-only (onboarding step id 25). When adding goal-type programs (e.g. "Get Lean", "Powerlifting"), also store the fitness goal answer from step id 0 and combine it with gender in `selectedProgramId`.
 
+### Rank tab (`RankView.swift`)
+
+Leaderboard with an animated podium. Data comes from a Supabase **RPC `get_leaderboard`** (server-side function — the only `.rpc()` call in the app), decoded into a file-private `LeaderboardRow`.
+
+⚠️ **`load()` is `#if DEBUG`-gated: Debug builds never hit Supabase** — they use the hardcoded `mockEntries` with `currentUserId = "uid-me"`. Verify leaderboard changes in a Release build or by temporarily flipping the `#if`. Avatars are local asset images picked by hashing the user id (plus a hardcoded `avatarOverrides` map) — there is no remote avatar storage.
+
+### Explore tab (`ExploreView.swift`)
+
+Reels-style vertical video feed. `visibleID` (via `.scrollPosition`) is the single source of truth for which video plays; mute is a shared binding across cards. It loads all `exercises` rows directly from Supabase (bypassing `ProgramService`), filters to rows with a `videoUrl`, and **falls back to bundled `WorkoutDay.weekSchedule` sample videos if the query fails or returns nothing**. Loads once per view lifetime. The only screen that uses a black base instead of `AppBackground`.
+
 ### In-app purchases (`StoreVM.swift` / `PaywallView.swift`)
 
 `StoreVM` is an `@Observable @MainActor` class. Two auto-renewable subscriptions:
@@ -208,6 +232,8 @@ iOS 26 app built around **Liquid Glass**. Key patterns:
 - `.glassEffectID(_:in:)` with a `@Namespace` — animated selected-day pill in the week strip
 - `AppBackground` — `MeshGradient` view; use as the base `ZStack` layer in every screen. Has both dark and light mode variants — do not force dark-only at the root.
 
+**Lottie animations** — via the DotLottie SPM package. `DotLottieAnimation` must be a `@StateObject`, so every animated element is factored into its own small wrapper struct (`AnimatedFlame`, `StreakBadgeView`, etc.) — follow that pattern for new animations. The `.lottie` files live loose in `MuscleClub/MuscleClub/` and the `fileName:` strings include the `(1)`/`(2)` download suffixes. `Flame animation.lottie` is shared by `RankView`, `DashboardView`, and `WorkoutSummaryView`; the rest are onboarding-only.
+
 ### Colors (`Models.swift`)
 
 | Name | Value | Usage |
@@ -222,6 +248,7 @@ iOS 26 app built around **Liquid Glass**. Key patterns:
 - Client singleton: `supabase` in `SupabaseClient.swift`
 - Storage bucket: `exercise-videos` — HTTPS URLs stored in `exercises.video_url`
 - Video URL pattern: `https://neomyrexkfgrsrcqvnsb.supabase.co/storage/v1/object/public/exercise-videos/{Folder}/{filename}.mov` (folder names are case-sensitive; spaces encoded as `%20`)
+- Schema/seed SQL lives one directory up from the repo: `/Users/gisliprufugaur/Developer/MuscleClub/supabase_migration.sql` and `video_url_updates.sql`
 
 ### Known pre-ship content gap
 

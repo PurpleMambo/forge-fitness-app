@@ -42,12 +42,15 @@ final class ProgramService {
             async let m = fetchMilestones(programId: programId)
             templates  = try await t
             milestones = try await m
+            // Mock mid-program state so TargetView shows real progress; clamped so
+            // todayTemplate() still resolves if only early weeks are seeded in Supabase.
+            let maxWeek = templates.map(\.weekNumber).max() ?? 1
             userProgram = RemoteUserProgram(
                 id: UUID(),
                 userId: UUID(),
                 programId: programId,
                 startedAt: Date(),
-                currentWeek: 1
+                currentWeek: min(5, maxWeek)
             )
         } catch {
             self.error = error.localizedDescription
