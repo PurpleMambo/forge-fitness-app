@@ -39,13 +39,13 @@ struct MuscleClubPaywallView: View {
     }
 
     private var yearlyMonthlyEquivalent: String {
-        guard let p = yearlyProduct else { return "$3.33" }
+        guard let p = yearlyProduct else { return "$8.25" }
         let monthly = NSDecimalNumber(decimal: p.price).doubleValue / 12.0
         return String(format: "$%.2f", monthly)
     }
 
-    private var yearlyDisplayPrice: String { yearlyProduct?.displayPrice ?? "$39.99" }
-    private var weeklyDisplayPrice: String { weeklyProduct?.displayPrice ?? "$1.99" }
+    private var yearlyDisplayPrice: String { yearlyProduct?.displayPrice ?? "$99.00" }
+    private var weeklyDisplayPrice: String { weeklyProduct?.displayPrice ?? "$3.99" }
 
     // MARK: - Personalization
 
@@ -289,11 +289,11 @@ struct MuscleClubPaywallView: View {
                 plan: .yearly,
                 title: "Annual",
                 badge: yearlyHasTrial ? "3 DAYS FREE" : "BEST VALUE",
-                priceMain: yearlyMonthlyEquivalent,
-                priceSub: "per month",
+                priceMain: yearlyDisplayPrice,
+                priceSub: "per year",
                 detail: yearlyHasTrial
-                    ? "Free for 3 days, then \(yearlyDisplayPrice)/yr"
-                    : "\(yearlyDisplayPrice) billed yearly"
+                    ? "3 days free · ≈ \(yearlyMonthlyEquivalent)/month"
+                    : "≈ \(yearlyMonthlyEquivalent)/month"
             )
             .padding(.top, 10)
 
@@ -450,7 +450,7 @@ struct MuscleClubPaywallView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "checkmark.seal.fill")
                         .foregroundStyle(Color.appAccent)
-                    Text("No payment due today")
+                    Text("No payment due today · then \(yearlyDisplayPrice)/year")
                         .foregroundStyle(.primary)
                 }
                 .font(.system(size: 14, weight: .semibold))

@@ -248,7 +248,9 @@ iOS 26 app built around **Liquid Glass**. Key patterns:
 - Client singleton: `supabase` in `SupabaseClient.swift`
 - Storage bucket: `exercise-videos` — HTTPS URLs stored in `exercises.video_url`
 - Video URL pattern: `https://neomyrexkfgrsrcqvnsb.supabase.co/storage/v1/object/public/exercise-videos/{Folder}/{filename}.mov` (folder names are case-sensitive; spaces encoded as `%20`)
-- Schema/seed SQL lives one directory up from the repo: `/Users/gisliprufugaur/Developer/MuscleClub/supabase_migration.sql` and `video_url_updates.sql`
+- Schema/seed SQL lives one directory up from the repo: `/Users/gisliprufugaur/Developer/MuscleClub/supabase_migration.sql`, `video_url_updates.sql`, `delete_account.sql`, `profiles.sql`
+- ⚠️ `workout_logs.user_id` is **`text`**, not `uuid` (unlike every other user_id column) — any SQL comparing it to `auth.uid()` needs a `::text` cast. This has already caused one runtime-only bug in `delete_account()`.
+- `public.profiles` — one row per user, populated from onboarding answers by `SignUpView.saveProfile()` at sign-up (columns mirror `ProfileUpsert` in `NewOnboardingFlowView.swift`). RLS owner-only. Skipped-sign-up and `LoginView` users don't get/update rows.
 
 ### Known pre-ship content gap
 
